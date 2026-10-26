@@ -70,7 +70,8 @@
     <div class="stats" id="stats"></div>
     <div id="warns"></div>
     <div class="row" style="margin:12px 0">
-      <button class="btn" id="dl" disabled>Download Excel</button>
+      <button class="btn" id="dl" disabled>Download database Excel</button>
+      <button class="btn" id="dl2" disabled>Download class timetables</button>
       <span class="muted" id="dlInfo"></span>
     </div>
     <h2 style="margin-top:16px">Preview (first 15 rows)</h2>
@@ -404,7 +405,53 @@
     return wb;
   }
 
-  root.TT = { readPdf, parsePage, pairLesson, expandRows, validate, parseCsv, buildWorkbook, DAYS, TIMES };
+  // ---- Second workbook: one sheet per class, timetable grid (periods down, days across) ----
+  async function buildClassWorkbook(ExcelJS, lessons) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Timetable PDF to Excel';
+    const FONT = { name: 'Arial', size: 10 };
+    const HF = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    const fillHead = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    const fillSide = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+    const edge = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+    const border = { top: edge, left: edge, bottom: edge, right: edge };
+    const order = [], byClass = {};
+    for (const L of lessons) {
+      const name = L.cls || ('Page ' + L.page);
+      if (!byClass[name]) { byClass[name] = []; order.push(name); }
+      byClass[name].push(L);
+    }
+    for (const name of order) {
+      const ws = wb.addWorksheet(name.replace(/[\[\]:*?\/\\]/g, '_').slice(0, 31), { views: [{ state: 'frozen', xSplit: 1, ySplit: 1 }] });
+      ws.getColumn(1).width = 8;
+      for (let d = 0; d < 10; d++) ws.getColumn(d + 2).width = 15;
+      const a1 = ws.getCell(1, 1); a1.value = name;
+      DAYS.forEach((d, i) => { ws.getCell(1, i + 2).value = d; });
+      for (let c = 1; c <= 11; c++) {
+        const cell = ws.getCell(1, c);
+        cell.font = HF; cell.fill = fillHead; cell.border = border;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+      ws.getRow(1).height = 24;
+      for (let p = 1; p <= 7; p++) {
+        const cell = ws.getCell(p + 1, 1);
+        cell.value = p; cell.font = { name: 'Arial', size: 10, bold: true }; cell.fill = fillSide; cell.border = border;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(p + 1).height = 24;
+        for (let d = 0; d < 10; d++) {
+          const g = ws.getCell(p + 1, d + 2);
+          g.font = FONT; g.border = border; g.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        }
+      }
+      for (const L of byClass[name]) {
+        const col = DAYS.indexOf(L.day) + 2;
+        for (let p = L.period; p < L.period + L.span; p++) ws.getCell(p + 1, col).value = L.subject;
+      }
+    }
+    return wb;
+  }
+
+  root.TT = { readPdf, parsePage, pairLesson, expandRows, validate, parseCsv, buildWorkbook, buildClassWorkbook, DAYS, TIMES };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -431,7 +478,7 @@
   async function handlePdf(file) {
     if (!file) return;
     if (!window.pdfjsLib || !window.ExcelJS) { setStatus('The PDF and Excel libraries could not be loaded. Check your internet connection and reload.', 'err'); return; }
-    state.fileName = file.name; state.lessons = null; $('result').hidden = true; $('dl').disabled = true;
+    state.fileName = file.name; state.lessons = null; $('result').hidden = true; $('dl').disabled = true; $('dl2').disabled = true;
     var prog = $('prog'); prog.hidden = false; prog.value = 0;
     setStatus('Reading ' + file.name + '…');
     try {
@@ -470,7 +517,7 @@
     var rows = recs.slice(0, 15).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; });
     $('prev').innerHTML = '<tr>' + head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr>' +
       rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(String(c)) + '</td>'; }).join('') + '</tr>'; }).join('');
-    $('result').hidden = false; $('dl').disabled = false; updateDlInfo();
+    $('result').hidden = false; $('dl').disabled = false; $('dl2').disabled = false; updateDlInfo();
   }
   function li(s) { return '<li>' + s + '</li>'; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -498,31 +545,38 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
   }
 
-  async function download() {
+  async function saveWorkbook(btn, suffix, builder) {
     if (!state.recs) return;
-    var btn = $('dl'); btn.disabled = true; var old = btn.textContent; btn.textContent = 'Building…';
+    var old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
     try {
-      var wb = await TT.buildWorkbook(ExcelJS, state.lessons, state.recs, state.names, { fileName: state.fileName });
+      var wb = await builder();
       var buf = await wb.xlsx.writeBuffer();
       var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + '_database.xlsx';
+      a.download = (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + suffix;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
     } catch (e) { console.error(e); setStatus('Could not build the Excel file: ' + e.message, 'err'); }
     btn.textContent = old; btn.disabled = false;
+  }
+  function download() {
+    return saveWorkbook($('dl'), '_database.xlsx', function () { return TT.buildWorkbook(ExcelJS, state.lessons, state.recs, state.names, { fileName: state.fileName }); });
+  }
+  function downloadClasses() {
+    return saveWorkbook($('dl2'), '_class_timetables.xlsx', function () { return TT.buildClassWorkbook(ExcelJS, state.lessons); });
   }
 
   var drop = $('drop');
   $('pdf').addEventListener('change', function (e) { handlePdf(e.target.files[0]); });
   $('names').addEventListener('change', function (e) { handleNames(e.target.files[0]); });
   $('dl').addEventListener('click', download);
+  $('dl2').addEventListener('click', downloadClasses);
   $('sample').addEventListener('click', downloadSample);
   ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) handlePdf(f); });
-  window.__tt = { handlePdf: handlePdf, handleNames: handleNames, download: download, state: state };
+  window.__tt = { handlePdf: handlePdf, handleNames: handleNames, download: download, downloadClasses: downloadClasses, state: state };
 })();
 </script>
 </body>
