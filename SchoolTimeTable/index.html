@@ -3,13 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Timetable PDF to Excel</title>
+<title>Timetable PDF → Excel</title>
 <style>
   :root { --bg:#f6f7f9; --card:#ffffff; --text:#1c2430; --muted:#5b6675; --line:#d9dee6; --accent:#1f3864; --accent-text:#ffffff; --ok:#1b7f3b; --warn:#a15c00; --err:#b3261e; --drop:#eef2fa; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#14181f; --card:#1d232d; --text:#e8ecf2; --muted:#9aa6b6; --line:#323b49; --accent:#7ea6ff; --accent-text:#0d1420; --ok:#5fd18a; --warn:#f0b25a; --err:#ff8a80; --drop:#232b38; } }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; line-height:1.5; }
-  main { max-width:860px; margin:0 auto; padding:28px 18px 60px; }
+  .tabs { position:sticky; top:0; z-index:5; display:flex; gap:4px; padding:8px 18px 0; background:var(--card); border-bottom:1px solid var(--line); overflow-x:auto; }
+  .tab { appearance:none; border:1px solid transparent; border-bottom:0; background:transparent; color:var(--muted); padding:10px 18px; font:inherit; font-weight:600; font-size:.95rem; cursor:pointer; border-radius:8px 8px 0 0; white-space:nowrap; }
+  .tab:hover { background:var(--drop); }
+  .tab[aria-selected="true"] { color:var(--accent); background:var(--bg); border-color:var(--line); margin-bottom:-1px; border-bottom:2px solid var(--bg); box-shadow:inset 0 3px 0 var(--accent); }
+  main { max-width:860px; margin:0 auto; padding:24px 18px 60px; }
   h1 { font-size:1.5rem; margin:0 0 4px; }
   .sub { color:var(--muted); margin:0 0 22px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
@@ -24,7 +28,7 @@
   .btn.sec { background:transparent; color:var(--accent); border:1px solid var(--line); font-weight:500; padding:8px 14px; font-size:.9rem; }
   .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .muted { color:var(--muted); font-size:.9rem; }
-  #status { min-height:1.4em; margin:6px 0 0; }
+  .status { min-height:1.4em; margin:6px 0 0; }
   .ok { color:var(--ok); } .warn { color:var(--warn); } .err { color:var(--err); }
   progress { width:100%; height:10px; margin-top:10px; }
   table { border-collapse:collapse; width:100%; font-size:.85rem; }
@@ -39,44 +43,82 @@
 </style>
 </head>
 <body>
+<nav class="tabs" role="tablist" aria-label="Timetable type">
+  <button class="tab" role="tab" id="tab-class" aria-selected="true" aria-controls="panel-class" data-tab="class">Class Timetable PDF → Excel</button>
+  <button class="tab" role="tab" id="tab-teacher" aria-selected="false" aria-controls="panel-teacher" data-tab="teacher" tabindex="-1">Teacher Timetable PDF → Excel</button>
+</nav>
 <main>
-  <h1>Timetable PDF → Excel</h1>
+
+<!-- ===================== CLASS TAB ===================== -->
+<section id="panel-class" role="tabpanel" aria-labelledby="tab-class">
+  <h1>Class Timetable PDF → Excel</h1>
   <p class="sub">Upload the aSc class-timetable PDF and download a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching). Everything runs in your browser; the PDF is not uploaded anywhere.</p>
 
   <div class="card">
     <h2>1. Choose the PDF</h2>
-    <label class="drop" id="drop" for="pdf">
+    <label class="drop" id="c-drop" for="c-pdf">
       <strong>Drop the PDF here, or click to choose</strong>
       <span>e.g. 2627_T1_Class_v2.pdf (one page per class)</span>
     </label>
-    <input type="file" id="pdf" accept="application/pdf,.pdf">
-    <progress id="prog" value="0" max="1" hidden></progress>
-    <p id="status" class="muted" role="status" aria-live="polite"></p>
+    <input type="file" id="c-pdf" accept="application/pdf,.pdf">
+    <progress id="c-prog" value="0" max="1" hidden></progress>
+    <p id="c-status" class="status muted" role="status" aria-live="polite"></p>
   </div>
 
   <div class="card">
     <h2>2. Teacher names (optional)</h2>
-    <p class="muted" style="margin-top:0">The PDF only has teacher codes (e.g. KH, CSC). To fill the “Teacher Name” column, choose a CSV with the columns <code>Initial,Name,Department</code>. Use the sample button to get an empty file with these headers. Keeping it as a separate file means no staff names are stored in this public page.</p>
+    <p class="muted" style="margin-top:0">The PDF only has teacher codes (e.g. KH, CSC). To fill the “Teacher Name” column, choose a CSV with the columns <code>Initial,Name,Department</code>. Use the sample button to get an empty file with these headers.</p>
     <div class="row">
-      <input type="file" id="names" accept=".csv,text/csv">
-      <label for="names" class="btn sec">Choose teacher CSV</label>
-      <button type="button" class="btn sec" id="sample">Download sample CSV</button>
-      <span id="namesInfo" class="muted">No file chosen</span>
+      <input type="file" id="c-names" accept=".csv,text/csv">
+      <label for="c-names" class="btn sec">Choose teacher CSV</label>
+      <button type="button" class="btn sec" id="c-sample">Download sample CSV</button>
+      <span id="c-namesInfo" class="muted">No file chosen</span>
     </div>
   </div>
 
-  <div class="card" id="result" hidden>
+  <div class="card" id="c-result" hidden>
     <h2>3. Result</h2>
-    <div class="stats" id="stats"></div>
-    <div id="warns"></div>
+    <div class="stats" id="c-stats"></div>
+    <div id="c-warns"></div>
     <div class="row" style="margin:12px 0">
-      <button class="btn" id="dl" disabled>Download database Excel</button>
-      <button class="btn" id="dl2" disabled>Download class timetables</button>
-      <span class="muted" id="dlInfo"></span>
+      <button class="btn" id="c-dl" disabled>Download database Excel</button>
+      <button class="btn" id="c-dl2" disabled>Download class timetables</button>
+      <span class="muted" id="c-dlInfo"></span>
     </div>
     <h2 style="margin-top:16px">Preview (first 15 rows)</h2>
-    <div class="scroll"><table id="prev"></table></div>
+    <div class="scroll"><table id="c-prev"></table></div>
   </div>
+</section>
+
+<!-- ===================== TEACHER TAB ===================== -->
+<section id="panel-teacher" role="tabpanel" aria-labelledby="tab-teacher" hidden>
+  <h1>Teacher Timetable PDF → Excel</h1>
+  <p class="sub">Upload the aSc teacher-timetable PDF and download (1) a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching | Lesson/Meeting/Support) and (2) one timetable sheet per teacher. Teacher names are read from the PDF itself, so no teacher CSV is needed. Everything runs in your browser.</p>
+
+  <div class="card">
+    <h2>1. Choose the PDF</h2>
+    <label class="drop" id="t-drop" for="t-pdf">
+      <strong>Drop the PDF here, or click to choose</strong>
+      <span>e.g. 2627_T1_Teacher_v2.pdf (one page per teacher)</span>
+    </label>
+    <input type="file" id="t-pdf" accept="application/pdf,.pdf">
+    <progress id="t-prog" value="0" max="1" hidden></progress>
+    <p id="t-status" class="status muted" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card" id="t-result" hidden>
+    <h2>2. Result</h2>
+    <div class="stats" id="t-stats"></div>
+    <div id="t-warns"></div>
+    <div class="row" style="margin:12px 0">
+      <button class="btn" id="t-dl" disabled>Download database Excel</button>
+      <button class="btn" id="t-dl2" disabled>Download teacher timetables</button>
+    </div>
+    <h2 style="margin-top:16px">Preview (first 15 rows)</h2>
+    <div class="scroll"><table id="t-prev"></table></div>
+  </div>
+</section>
+
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -451,7 +493,328 @@
     return wb;
   }
 
-  root.TT = { readPdf, parsePage, pairLesson, expandRows, validate, parseCsv, buildWorkbook, buildClassWorkbook, DAYS, TIMES };
+  // ================= Teacher timetable PDF =================
+const TX=[63,134,206,278,349,421,493,565,636,708,780];
+const reTL=/^[A-Z]{1,4}(?: \/ [A-Z]{1,4})*(?: \/)?$/;          // teacher list item
+const reSubj=/^[A-Z0-9][A-Z0-9\/&.\-]*$/;                      // subject-like item (no spaces)
+const reC=/^S[1-6][A-Z0-9]{1,2}(?:[\/ ]S[1-6][A-Z0-9]{1,2})*\/?$/;
+const reSubjTL=/^([A-Z0-9][A-Z0-9\/&.\-]*) ([A-Z]{1,4}(?: \/ [A-Z]{1,4})*(?: \/)?)$/;
+const reTLSubj=/^([A-Z]{1,4}(?: \/ [A-Z]{1,4})*) ([A-Z0-9][A-Z0-9\/&.\-]*)$/;
+const reV=/^(?:\d|CP\d|HALL$|Music\b|Drama\b|Room\b|Centre|Hub)/;     // class list
+function isTeacherItem(s){ return reTL.test(s) && s!=='HALL'; }
+function lineType(items){
+  const texts=items.map(i=>i.s);
+  if(items.length===1){
+    const s=texts[0];
+    if(s==='HALL') return 'V';
+    if(reC.test(s)) return 'C';
+    if(isTeacherItem(s)) return 'T';
+    if(reSubjTL.test(s)||reTLSubj.test(s)) return 'T';
+    if(reV.test(s)) return 'V';
+    return 'N';
+  }
+  if(items.every(i=>reC.test(i.s))) return 'C';
+  if(items.every(i=>reV.test(i.s))) return 'V';
+  const tl=items.filter(i=>/ \/ | \/$/.test(i.s)||isTeacherItem(i.s));
+  if(tl.length && items.every(i=>isTeacherItem(i.s)||reSubj.test(i.s))) return 'T';
+  return 'N';
+}
+function parseTeacherPage(page,pageNo){
+  const out=[],problems=[];
+  const nm=page.items.filter(i=>i.size>15&&i.yb<60)[0];
+  const tname=nm?nm.s.trim():'';
+  if(!tname)problems.push('Page '+pageNo+': teacher name not found');
+  const grid=page.items.filter(i=>i.yb>=Y[0]&&i.yb<Y[Y.length-1]+4&&i.x>=TX[0]-1&&i.x<TX[TX.length-1]);
+  for(let c=0;c<10;c++){
+    let colItems=grid.filter(g=>TX[c]<=g.x+0.5&&g.x+0.5<TX[c+1]);
+    // ---- clash cells: two lessons side by side in one cell (different font sizes) ----
+    const clashItems=colItems.filter(g=>{const t=g.s.trim();return (reC.test(t)&&g.size>8)||(reV.test(t)&&g.size>5&&g.size<5.6);});
+    if(clashItems.length){
+      const rws=[...new Set(clashItems.map(g=>rowOf(g.yb-g.size*0.35)))].filter(r=>r>=0).sort((a,b)=>a-b);
+      const groups=[];rws.forEach(r=>{const l=groups[groups.length-1];if(l&&r-l[l.length-1]<=1)l.push(r);else groups.push([r]);});
+      for(const gr of groups){
+        const rs=gr[0],re=gr[gr.length-1],y0=Y[rs]-2,y1=Y[re+1]+2;
+        const blk=colItems.filter(g=>g.yb>=y0&&g.yb<y1);
+        colItems=colItems.filter(g=>!(g.yb>=y0&&g.yb<y1));
+        const mid=TX[c]+35.9;
+        for(const half of [blk.filter(g=>g.x+g.w/2<mid),blk.filter(g=>g.x+g.w/2>=mid)]){
+          if(!half.length)continue;
+          half.sort((a,b)=>a.yb-b.yb||a.x-b.x);
+          // baseline groups
+          const ls=[];let gp=[];const fl=()=>{if(gp.length){gp.sort((a,b)=>a.x-b.x);ls.push(gp);gp=[];}};
+          for(const g of half){if(gp.length&&Math.abs(g.yb-gp[0].yb)>=2.0)fl();gp.push(g);}fl();
+          const flat=ls.flat().map(g=>({s:g.s.replace(/\s+/g,' ').trim()}));
+          const first=flat[0];
+          let subject='';
+          if(first&&!/ \/ | \/$/.test(first.s)&&!reV.test(first.s)) subject=first.s;
+          const cls=[],ven=[],tparts=[];
+          flat.forEach((it,k)=>{ if(k===0&&subject)return;
+            if(reC.test(it.s))cls.push(it.s); else if(reV.test(it.s))ven.push(it.s);
+            else if(/ \/ | \/$/.test(it.s)||isTeacherItem(it.s))tparts.push(it.s); });
+          let tt='';tparts.forEach((p,k)=>{tt+=(k>0&&!tparts[k-1].trimEnd().endsWith('/'))?' / '+p:' '+p;});
+          let classes='';cls.forEach((p,k)=>{classes+=(k>0&&!cls[k-1].endsWith('/')?'/':'')+p;});
+          const hcy=half.map(g=>g.yb-g.size*0.35),hrs=Math.max(rs,rowOf(Math.min(...hcy))),hre=Math.min(re,rowOf(Math.max(...hcy)));
+          out.push({page:pageNo,tname,day:DAYS[c],period:hrs+1,span:Math.max(1,hre-hrs+1),kind:'Lesson',subject,classes,name:'',
+            teachers:tt.split('/').map(x=>x.trim()).filter(Boolean),venue:joinVenue(ven),clash:true});
+        }
+      }
+    }
+    const cw=colItems.sort((a,b)=>a.yb-b.yb||a.x-b.x);
+    const lines=[];let grp=[];
+    const flush=()=>{if(!grp.length)return;grp.sort((a,b)=>a.x-b.x);
+      const yb=grp.reduce((a,g)=>a+g.yb,0)/grp.length,size=Math.max(...grp.map(g=>g.size));
+      const items=grp.map(g=>({s:g.s.replace(/\s+/g,' ').trim(),x:g.x}));
+      lines.push({items,text:items.map(i=>i.s).join(' '),yb,size,cy:yb-size*0.35,t:lineType(items)});grp=[];};
+    for(const g of cw){if(grp.length&&Math.abs(g.yb-grp[0].yb)>=2.0)flush();grp.push(g);} flush();
+    // cards: [teacher/subject lines][class or name lines][venue lines]
+    let card=null;const cards=[];
+    for(const l of lines){
+      if(l.t==='T'){ if(!card||card.phase!=='T'){card={T:[l],M:[],V:[],phase:'T'};cards.push(card);} else card.T.push(l);}
+      else{ if(!card){card={T:[],M:[],V:[],phase:'M'};cards.push(card);}
+        if(card.phase==='T')card.phase='M';
+        if(card.phase==='M'&&l.t==='V')card.phase='V';
+        (card.phase==='M'?card.M:card.V).push(l);}
+    }
+    for(const cd of cards){
+      const all=[...cd.T,...cd.M,...cd.V];
+      if(!cd.T.length){problems.push('Page '+pageNo+' '+tname+' '+DAYS[c]+': card without teacher line "'+all.map(l=>l.text).join(' | ')+'"');continue;}
+      const rs=rowOf(all[0].cy),re=rowOf(all[all.length-1].cy);
+      if(rs<0||re<0||re<rs){problems.push('Page '+pageNo+' '+tname+' '+DAYS[c]+': could not place card');continue;}
+      // subject + teachers
+      let subject='',tparts=[];
+      for(const l of cd.T){
+        const its=l.items;
+        const listItems=its.filter(i=>/ \/ | \/$/.test(i.s));
+        if(its.length===1){const m1=its[0].s.match(reSubjTL),m2=its[0].s.match(reTLSubj);
+          if(!isTeacherItem(its[0].s)&&m1){if(!subject)subject=m1[1];tparts.push(m1[2]);}
+          else if(!isTeacherItem(its[0].s)&&m2){if(!subject)subject=m2[2];tparts.push(m2[1]);}
+          else tparts.push(its[0].s);}
+        else if(listItems.length){ its.forEach(i=>{ if(listItems.includes(i))tparts.push(i.s); else if(!subject)subject=i.s; }); }
+        else { // two plain items: left = subject, right = teacher
+          if(!subject)subject=its[0].s; tparts.push(its.slice(1).map(i=>i.s).join(' '));
+        }
+      }
+      let tt='';tparts.forEach((p,k)=>{tt+=(k>0&&!tparts[k-1].trimEnd().endsWith('/'))?' / '+p:' '+p;});
+      const teachers=tt.split('/').map(s=>s.trim()).filter(Boolean);
+      const cparts=cd.M.filter(l=>l.t==='C').map(l=>l.text);let classes='';cparts.forEach((p,k)=>{classes+=(k>0&&!cparts[k-1].endsWith('/')?'/':'')+p;});
+      const name=cd.M.filter(l=>l.t!=='C').map(l=>l.text).join(' ').trim();
+      const kind=classes?'Lesson':/meeting/i.test(name)?'Meeting':/support/i.test(name)?'Support':'Other';
+      out.push({page:pageNo,tname,day:DAYS[c],period:rs+1,span:re-rs+1,kind,subject:classes?subject:(name||subject),classes,name,teachers,venue:joinVenue(cd.V.map(l=>l.text))});
+    }
+  }
+  return {name:tname,cards:out,problems};
+}
+
+// ---- after all pages: split subject glued to first teacher, resolve each page's teacher code ----
+function finalizeTeacherCards(pagesResult){
+  const all=[];pagesResult.forEach(p=>p.cards.forEach(c=>all.push(c)));
+  const K=new Set();
+  all.forEach(c=>{c.teachers.forEach((t,i)=>{ if(i>0||c.clash) K.add(t); });});
+  // codes also from single-teacher cards
+  all.forEach(c=>{ if(c.teachers.length===1 && /^[A-Z]{1,4}$/.test(c.teachers[0]) && !c.glued) K.add(c.teachers[0]); });
+  let fixed=0;
+  all.forEach(c=>{ const t0=c.teachers[0]; if(!t0||K.has(t0))return;
+    for(let L=Math.min(4,t0.length-1);L>=1;L--){const suf=t0.slice(-L),pre=t0.slice(0,-L);
+      if(K.has(suf)&&/^[A-Z0-9\/&.\-]+$/.test(pre)){ if(!c.subject&&c.classes)c.subject=pre; c.teachers[0]=suf; fixed++; break; } } });
+  // teacher code per page = codes present in every card that lists teachers
+  pagesResult.forEach(p=>{
+    const lists=p.cards.filter(c=>c.teachers.length&&!c.clash).map(c=>new Set(c.teachers));
+    let inter=null;lists.forEach(s=>{inter=inter?new Set([...inter].filter(x=>s.has(x))):new Set(s);});
+    let cand=inter?[...inter]:[];
+    if(cand.length>1){ // prefer a code that appears alone on some card
+      const solo=p.cards.filter(c=>c.teachers.length===1).map(c=>c.teachers[0]);
+      const c2=cand.filter(x=>solo.includes(x)); if(c2.length)cand=c2; }
+    p.code=cand.length===1?cand[0]:''; p.candidates=cand;
+    p.cards.forEach(c=>{ if(!c.teachers.length&&p.code)c.teachers=[p.code]; });
+  });
+  // elimination: a code belongs to one page only
+  for(let iter=0;iter<10;iter++){
+    const taken=new Set(pagesResult.filter(p=>p.code).map(p=>p.code));let changed=false;
+    pagesResult.forEach(p=>{ if(p.code)return; const left=(p.candidates||[]).filter(x=>!taken.has(x));
+      if(left.length===1){p.code=left[0];changed=true;taken.add(left[0]);} p.candidates=left; });
+    if(!changed)break;
+  }
+  pagesResult.forEach(p=>p.cards.forEach(c=>{ if(!c.teachers.length&&p.code)c.teachers=[p.code]; }));
+  return {fixed};
+}
+
+  // ---- Teacher timetable: pairing, rows and workbooks ----
+  function nameOnly(full) { const m = String(full).match(/^(.*?)\s*\((.*)\)\s*$/); return m ? m[1] : String(full); }
+  function deptOnly(full) { const m = String(full).match(/^(.*?)\s*\((.*)\)\s*$/); return m ? m[2] : ''; }
+
+  function pairTeacherCard(card, code) {
+    const kind = card.kind === 'Other' ? 'Lesson' : card.kind;
+    if (kind !== 'Lesson') {
+      return { venue: card.venue, subject: card.subject || card.name, sharing: 1, status: kind };
+    }
+    const T = card.teachers, n = T.length, idx = T.indexOf(code);
+    const V = card.venue.split(',').map(s => s.trim()).filter(Boolean), m = V.length;
+    const S = (card.subject || '').split('/').map(s => s.trim()).filter(Boolean), k = S.length;
+    let venue, sharing, status;
+    if (idx < 0 && n > 0) { venue = card.venue; sharing = 1; status = 'Teacher not in lesson list'; }
+    else if (n === m && m > 0) { venue = V[idx]; sharing = 1; status = 'Paired'; }
+    else if (m === 1) { venue = V[0]; sharing = Math.max(n, 1); status = 'Shared venue'; }
+    else if (m === 0) { venue = ''; sharing = 1; status = 'No venue'; }
+    else { venue = card.venue; sharing = n > m ? n : 1; status = 'Not paired (' + n + ' teachers, ' + m + ' venues)'; }
+    let subject = card.subject || '';
+    if (k === 1) subject = S[0];
+    else if (k > 1 && k === n && idx >= 0) subject = S[idx];
+    else if (k > 1) status += ' / subject not split (' + k + ' subjects, ' + n + ' teachers)';
+    return { venue: venue, subject: subject, sharing: sharing, status: status };
+  }
+
+  // pages: result of parseTeacherPage for each page (after finalizeTeacherCards)
+  function teacherRows(pages) {
+    const recs = [], lessonsOut = [];
+    pages.forEach(p => {
+      const code = p.code || '';
+      const tname = p.name || '';
+      p.cards.forEach(card => {
+        const pr = pairTeacherCard(card, code);
+        const kind = card.kind === 'Other' ? 'Lesson' : card.kind;
+        lessonsOut.push({ page: p.page, code: code, tname: tname, day: card.day, period: card.period, span: card.span, kind: kind,
+          subject: pr.subject || card.subject || card.name, classes: card.classes || '', teachers: card.teachers, venue: card.venue, clash: !!card.clash });
+        for (let q = card.period; q < card.period + card.span; q++) {
+          recs.push({ teacher: code || nameOnly(tname), day: card.day, period: q, cls: card.classes || '', venue: pr.venue, kind: kind,
+                      subject: pr.subject, time: TIMES[q - 1], sharing: pr.sharing, status: pr.status, tname: nameOnly(tname), page: p.page, clash: !!card.clash });
+        }
+      });
+    });
+    const dord = {}; DAYS.forEach((d, i) => dord[d] = i);
+    recs.sort((a, b) => (a.page - b.page) || (dord[a.day] - dord[b.day]) || (a.period - b.period) || (a.cls < b.cls ? -1 : a.cls > b.cls ? 1 : 0));
+    return { recs: recs, lessons: lessonsOut };
+  }
+
+  function validateTeacher(pages, recs) {
+    const warn = [];
+    const noCode = pages.filter(p => !p.code && p.cards.length).map(p => p.name);
+    const emptyPages = pages.filter(p => !p.cards.length).map(p => p.name);
+    const clashes = [];
+    const occ = {};
+    recs.forEach(r => { const k = r.page + '|' + r.day + '|' + r.period; (occ[k] = occ[k] || []).push(r); });
+    Object.keys(occ).forEach(k => { if (occ[k].length > 1) clashes.push(occ[k][0].tname + ' ' + occ[k][0].day + ' P' + occ[k][0].period); });
+    return { noCode: noCode, emptyPages: emptyPages, clashes: clashes };
+  }
+
+  async function buildTeacherDbWorkbook(ExcelJS, recs, pages, meta) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Timetable PDF to Excel';
+    const FONT = { name: 'Arial', size: 10 };
+    const HF = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    const fillMain = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    const fillExtra = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF595959' } };
+    const ws = wb.addWorksheet('Timetable', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const heads = ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching (Y or N)', 'Lesson/Meeting/Support', 'Subject', 'Time',
+                   'Teachers sharing this venue', 'Pairing', 'Teacher Name'];
+    const widths = [10, 7, 8, 28, 30, 14, 16, 30, 13, 14, 34, 24];
+    ws.columns = heads.map((h, i) => ({ header: h, width: widths[i] }));
+    const hr = ws.getRow(1); hr.height = 32;
+    hr.eachCell((c, i) => { c.font = HF; c.fill = i <= 7 ? fillMain : fillExtra; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; });
+    recs.forEach((r, idx) => {
+      const n = idx + 2, row = ws.getRow(n);
+      row.getCell(1).value = r.teacher; row.getCell(2).value = r.day; row.getCell(3).value = r.period; row.getCell(4).value = r.cls;
+      row.getCell(5).value = r.venue;
+      row.getCell(6).value = { formula: 'IF(J' + n + '>1,"Y","N")', result: r.sharing > 1 ? 'Y' : 'N' };
+      row.getCell(7).value = r.kind; row.getCell(8).value = r.subject; row.getCell(9).value = r.time;
+      row.getCell(10).value = r.sharing; row.getCell(11).value = r.status; row.getCell(12).value = r.tname;
+      for (let c = 1; c <= 12; c++) {
+        const cell = row.getCell(c); cell.font = FONT;
+        if ([2, 3, 6, 7, 10].indexOf(c) >= 0) cell.alignment = { horizontal: 'center' };
+      }
+    });
+    ws.autoFilter = { from: 'A1', to: 'L' + (recs.length + 1) };
+
+    const ws3 = wb.addWorksheet('Teacher Lookup', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ws3.columns = [{ header: 'Code', width: 10 }, { header: 'Name', width: 28 }, { header: 'Department / Subject', width: 34 }];
+    ws3.getRow(1).eachCell(c => { c.font = HF; c.fill = fillMain; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+    pages.forEach((p, i) => {
+      const r = ws3.getRow(i + 2);
+      [p.code || '', nameOnly(p.name), deptOnly(p.name)].forEach((v, k) => { r.getCell(k + 1).value = v; r.getCell(k + 1).font = FONT; });
+    });
+
+    const ws4 = wb.addWorksheet('Notes');
+    ws4.columns = [{ width: 130 }];
+    const notes = [
+      ['Teacher timetable database export', true],
+      ['Source PDF: ' + (meta && meta.fileName ? meta.fileName : '') + '   |   Generated in the browser; the PDF is not uploaded anywhere.', false],
+      ['', false],
+      ['How the data is laid out', true],
+      ['One row per Teacher x Day x Period. A double period is two rows (one per period).', false],
+      ['Columns A-G are the requested fields. Columns H-L are reference columns (Subject, Time, Teachers sharing this venue, Pairing, Teacher Name).', false],
+      ['Teacher = the teacher code. The PDF only prints the full name on each page, so the code is taken from the initials that appear in all of that teacher\u2019s lessons (and, where several teachers always teach together, by elimination).', false],
+      ['Class = the classes of the lesson as printed (e.g. S1H/S1K/S1U). Meetings and support periods have no class.', false],
+      ['Lesson/Meeting/Support: Lesson = a card with classes; Meeting = a card whose name contains "Meeting"; Support = a card whose name contains "SUPPORT".', false],
+      ['For Meeting and Support rows the Subject column holds the name printed on the card.', false],
+      ['', false],
+      ['Pairing rule (teachers / venues / subjects are matched by position)', true],
+      ['"AF / HC / SYC" with venues "601,602,603" means AF uses 601, HC uses 602, SYC uses 603. Subjects pair the same way (e.g. CH/BIO with TH / NYC and 604,213). The Venue and Subject shown are the ones that belong to this teacher.', false],
+      ['Paired: number of teachers = number of venues. Shared venue: one venue for several teachers. Not paired: counts differ and there is more than one venue, so the position rule cannot be applied; the full venue list is shown and the row is flagged in column K.', false],
+      ['Co-teaching = Y when more than one teacher uses the same venue in the same lesson (column J > 1), otherwise N. Meetings and support rows are N.', false],
+      ['', false],
+      ['Limitations', true],
+      ['1. If a teacher has two lessons in the same period (a clash), both are listed in that period.', false],
+      ['2. Free periods have no row. A teacher page with no lessons produces no rows.', false],
+      ['3. Rows are read from the PDF by text position and font size. The same lessons were cross-checked against the class timetable PDF for the previous term file and matched.', false]
+    ];
+    notes.forEach((nt, i) => { const c = ws4.getRow(i + 1).getCell(1); c.value = nt[0]; c.font = { name: 'Arial', size: 10, bold: nt[1] }; c.alignment = { wrapText: true, vertical: 'top' }; });
+    return wb;
+  }
+
+  // One sheet per teacher: periods down, days across (cell = subject, classes, venue on separate lines)
+  async function buildTeacherTimetableWorkbook(ExcelJS, pages) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Timetable PDF to Excel';
+    const FONT = { name: 'Arial', size: 10 };
+    const HF = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    const fillHead = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    const fillSide = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+    const edge = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+    const border = { top: edge, left: edge, bottom: edge, right: edge };
+    const used = {};
+    pages.forEach(p => {
+      const label = p.code || nameOnly(p.name) || ('Page ' + p.page);
+      let sn = label.replace(/[\[\]:*?\/\\]/g, '_').slice(0, 31), k = 2;
+      while (used[sn.toLowerCase()]) { sn = sn.slice(0, 28) + '_' + (k++); }
+      used[sn.toLowerCase()] = 1;
+      const ws = wb.addWorksheet(sn, { views: [{ state: 'frozen', xSplit: 1, ySplit: 1 }] });
+      ws.getColumn(1).width = 10;
+      for (let d = 0; d < 10; d++) ws.getColumn(d + 2).width = 20;
+      ws.getCell(1, 1).value = label;
+      DAYS.forEach((d, i) => { ws.getCell(1, i + 2).value = d; });
+      for (let c = 1; c <= 11; c++) {
+        const cell = ws.getCell(1, c); cell.font = HF; cell.fill = fillHead; cell.border = border;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+      ws.getRow(1).height = 24;
+      for (let q = 1; q <= 7; q++) {
+        const cell = ws.getCell(q + 1, 1);
+        cell.value = q; cell.font = { name: 'Arial', size: 10, bold: true }; cell.fill = fillSide; cell.border = border;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(q + 1).height = 44;
+        for (let d = 0; d < 10; d++) {
+          const g = ws.getCell(q + 1, d + 2);
+          g.font = FONT; g.border = border; g.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        }
+      }
+      p.cards.forEach(card => {
+        const kind = card.kind === 'Other' ? 'Lesson' : card.kind;
+        const pr = pairTeacherCard(card, p.code || '');
+        let text = pr.subject || card.subject || card.name;
+        if (kind === 'Lesson' && card.classes) text += '\n' + card.classes;
+        if (pr.venue) text += '\n' + pr.venue;
+        const col = DAYS.indexOf(card.day) + 2;
+        for (let q = card.period; q < card.period + card.span; q++) {
+          const cell = ws.getCell(q + 1, col);
+          cell.value = cell.value ? cell.value + '\n' + text : text;   // clash: both lessons shown
+        }
+      });
+      const nm = ws.getCell(10, 1); nm.value = p.name; nm.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF595959' } };
+    });
+    return wb;
+  }
+
+  root.TT = { readPdf, parsePage, pairLesson, expandRows, validate, parseCsv, buildWorkbook, buildClassWorkbook,
+    parseTeacherPage, finalizeTeacherCards, teacherRows, validateTeacher, buildTeacherDbWorkbook, buildTeacherTimetableWorkbook, DAYS, TIMES };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -459,13 +822,13 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var state = { lessons: null, recs: null, fileName: '', names: {} };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var li = function (s) { return '<li>' + s + '</li>'; };
 
   if (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 
-  function setStatus(msg, cls) { var s = $('status'); s.textContent = msg; s.className = cls || 'muted'; }
   function readFile(file, asText) {
     return new Promise(function (res, rej) {
       var fr = new FileReader();
@@ -475,108 +838,178 @@
     });
   }
 
-  async function handlePdf(file) {
-    if (!file) return;
-    if (!window.pdfjsLib || !window.ExcelJS) { setStatus('The PDF and Excel libraries could not be loaded. Check your internet connection and reload.', 'err'); return; }
-    state.fileName = file.name; state.lessons = null; $('result').hidden = true; $('dl').disabled = true; $('dl2').disabled = true;
-    var prog = $('prog'); prog.hidden = false; prog.value = 0;
-    setStatus('Reading ' + file.name + '…');
-    try {
-      var buf = await readFile(file, false);
-      var pages = await TT.readPdf(pdfjsLib, new Uint8Array(buf), function (i, n) { prog.max = n; prog.value = i; setStatus('Reading page ' + i + ' of ' + n + '…'); });
-      var lessons = [], problems = [];
-      pages.forEach(function (p, i) { var r = TT.parsePage(p, i + 1); lessons = lessons.concat(r.lessons); problems = problems.concat(r.problems); });
-      if (!lessons.length) { setStatus('No lessons found. Is this the aSc class-timetable PDF (landscape, one class per page)?', 'err'); prog.hidden = true; return; }
-      var v = TT.validate(lessons);
-      var recs = TT.expandRows(lessons);
-      state.lessons = lessons; state.recs = recs;
-      showResult(pages.length, lessons, recs, v, problems);
-      setStatus('Done. ' + recs.length.toLocaleString() + ' rows ready.', 'ok');
-    } catch (e) {
-      console.error(e); setStatus('Could not read this PDF: ' + (e && e.message ? e.message : e), 'err');
+  // ---------- generic panel: drop zone, progress, result card, downloads ----------
+  // cfg.analyze(pages, fileName) -> { stats, warnHtml, head, rows, store } ; cfg.btn1 / cfg.btn2 = { suffix, build() }
+  function makePanel(p, cfg) {
+    var state = { ready: false, fileName: '' };
+    var el = function (s) { return $(p + '-' + s); };
+    function setStatus(msg, cls) { var s = el('status'); s.textContent = msg; s.className = 'status ' + (cls || 'muted'); }
+
+    async function handlePdf(file) {
+      if (!file) return;
+      if (!window.pdfjsLib || !window.ExcelJS) { setStatus('The PDF and Excel libraries could not be loaded. Check your internet connection and reload.', 'err'); return; }
+      state.fileName = file.name; state.ready = false;
+      el('result').hidden = true; el('dl').disabled = true; el('dl2').disabled = true;
+      var prog = el('prog'); prog.hidden = false; prog.value = 0;
+      setStatus('Reading ' + file.name + '…');
+      try {
+        var buf = await readFile(file, false);
+        var pages = await TT.readPdf(pdfjsLib, new Uint8Array(buf), function (i, n) { prog.max = n; prog.value = i; setStatus('Reading page ' + i + ' of ' + n + '…'); });
+        var r = cfg.analyze(pages, file.name);
+        if (!r) { setStatus(cfg.emptyMsg, 'err'); prog.hidden = true; return; }
+        state.ready = true;
+        el('stats').innerHTML = r.stats.map(function (s) { return '<div class="stat"><b>' + Number(s[1]).toLocaleString() + '</b>' + s[0] + '</div>'; }).join('');
+        el('warns').innerHTML = r.warnHtml;
+        el('prev').innerHTML = '<tr>' + r.head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr>' +
+          r.rows.map(function (row) { return '<tr>' + row.map(function (c) { return '<td>' + esc(String(c)) + '</td>'; }).join('') + '</tr>'; }).join('');
+        el('result').hidden = false; el('dl').disabled = false; el('dl2').disabled = false;
+        if (cfg.onReady) cfg.onReady(el);
+        setStatus('Done. ' + r.total.toLocaleString() + ' rows ready.', 'ok');
+      } catch (e) {
+        console.error(e); setStatus('Could not read this PDF: ' + (e && e.message ? e.message : e), 'err');
+      }
+      prog.hidden = true;
     }
-    prog.hidden = true;
+
+    async function save(btn, which) {
+      if (!state.ready) return;
+      var old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
+      try {
+        var wb = await which.build(state);
+        var buf = await wb.xlsx.writeBuffer();
+        var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + which.suffix;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      } catch (e) { console.error(e); setStatus('Could not build the Excel file: ' + e.message, 'err'); }
+      btn.textContent = old; btn.disabled = false;
+    }
+
+    var drop = el('drop');
+    el('pdf').addEventListener('change', function (e) { handlePdf(e.target.files[0]); });
+    el('dl').addEventListener('click', function () { return save(el('dl'), cfg.btn1); });
+    el('dl2').addEventListener('click', function () { return save(el('dl2'), cfg.btn2); });
+    ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+    drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) handlePdf(f); });
+
+    return { handlePdf: handlePdf, state: state, downloadDb: function () { return save(el('dl'), cfg.btn1); }, downloadSecond: function () { return save(el('dl2'), cfg.btn2); } };
   }
 
-  function showResult(nPages, lessons, recs, v, problems) {
-    var doubles = lessons.filter(function (l) { return l.span > 1; }).length;
-    var pairedRows = recs.filter(function (r) { return r.status === 'Paired'; }).length;
-    var sharedRows = recs.filter(function (r) { return r.status === 'Shared venue'; }).length;
-    var unpaired = recs.length - pairedRows - sharedRows;
-    var stats = [['Class pages', nPages], ['Lessons', lessons.length], ['Double periods', doubles], ['Excel rows', recs.length],
-                 ['Paired rows', pairedRows + sharedRows], ['Not paired rows', unpaired]];
-    $('stats').innerHTML = stats.map(function (s) { return '<div class="stat"><b>' + Number(s[1]).toLocaleString() + '</b>' + s[0] + '</div>'; }).join('');
-    var w = '';
-    if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
-    if (v.warn.length) w += '<p class="warn"><b>Overlapping lessons:</b></p><ul class="w">' + v.warn.slice(0, 8).map(esc).map(li).join('') + '</ul>';
-    if (v.notFull.length) w += '<p class="warn">' + v.notFull.length + ' class-day(s) do not add up to 7 periods (' + esc(v.notFull.slice(0, 8).join(', ')) + (v.notFull.length > 8 ? ', …' : '') + '). This can be normal for a nearly empty class page, but please check them against the PDF.</p>';
-    if (!problems.length && !v.warn.length && !v.notFull.length) w += '<p class="ok">Check passed: every class-day adds up to 7 periods with no overlaps.</p>';
-    if (unpaired) w += '<p class="muted">“Not paired” rows are lessons where the number of teachers and venues differ (and there is more than one venue), so the position rule cannot be applied. They are flagged in the “Pairing” column.</p>';
-    $('warns').innerHTML = w;
-    var head = ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Subject', 'Pairing'];
-    var rows = recs.slice(0, 15).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; });
-    $('prev').innerHTML = '<tr>' + head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr>' +
-      rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(String(c)) + '</td>'; }).join('') + '</tr>'; }).join('');
-    $('result').hidden = false; $('dl').disabled = false; $('dl2').disabled = false; updateDlInfo();
+  // ====================== CLASS TAB ======================
+  var cls = { lessons: null, recs: null, names: {} };
+  function updateNamesInfo() {
+    var n = Object.keys(cls.names).length;
+    $('c-dlInfo').textContent = n ? 'Teacher names: ' + n + ' loaded.' : 'No teacher names loaded (Teacher Name column will be blank).';
   }
-  function li(s) { return '<li>' + s + '</li>'; }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function updateDlInfo() {
-    var n = Object.keys(state.names).length;
-    $('dlInfo').textContent = n ? 'Teacher names: ' + n + ' loaded.' : 'No teacher names loaded (Teacher Name column will be blank).';
-  }
+  var classPanel = makePanel('c', {
+    emptyMsg: 'No lessons found. Is this the aSc class-timetable PDF (landscape, one class per page)?',
+    analyze: function (pages) {
+      var lessons = [], problems = [];
+      pages.forEach(function (pg, i) { var r = TT.parsePage(pg, i + 1); lessons = lessons.concat(r.lessons); problems = problems.concat(r.problems); });
+      if (!lessons.length) return null;
+      var v = TT.validate(lessons), recs = TT.expandRows(lessons);
+      cls.lessons = lessons; cls.recs = recs;
+      var doubles = lessons.filter(function (l) { return l.span > 1; }).length;
+      var paired = recs.filter(function (r) { return r.status === 'Paired'; }).length;
+      var shared = recs.filter(function (r) { return r.status === 'Shared venue'; }).length;
+      var unpaired = recs.length - paired - shared;
+      var w = '';
+      if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
+      if (v.warn.length) w += '<p class="warn"><b>Overlapping lessons:</b></p><ul class="w">' + v.warn.slice(0, 8).map(esc).map(li).join('') + '</ul>';
+      if (v.notFull.length) w += '<p class="warn">' + v.notFull.length + ' class-day(s) do not add up to 7 periods (' + esc(v.notFull.slice(0, 8).join(', ')) + (v.notFull.length > 8 ? ', …' : '') + '). This can be normal for a nearly empty class page, but please check them against the PDF.</p>';
+      if (!problems.length && !v.warn.length && !v.notFull.length) w += '<p class="ok">Check passed: every class-day adds up to 7 periods with no overlaps.</p>';
+      if (unpaired) w += '<p class="muted">“Not paired” rows are lessons where the number of teachers and venues differ (and there is more than one venue), so the position rule cannot be applied. They are flagged in the “Pairing” column.</p>';
+      return {
+        total: recs.length,
+        stats: [['Class pages', pages.length], ['Lessons', lessons.length], ['Double periods', doubles], ['Excel rows', recs.length], ['Paired rows', paired + shared], ['Not paired rows', unpaired]],
+        warnHtml: w,
+        head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Subject', 'Pairing'],
+        rows: recs.slice(0, 15).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; })
+      };
+    },
+    onReady: updateNamesInfo,
+    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildWorkbook(ExcelJS, cls.lessons, cls.recs, cls.names, { fileName: st.fileName }); } },
+    btn2: { suffix: '_class_timetables.xlsx', build: function () { return TT.buildClassWorkbook(ExcelJS, cls.lessons); } }
+  });
 
   async function handleNames(file) {
     if (!file) return;
     try {
-      var txt = await readFile(file, true);
-      state.names = TT.parseCsv(txt);
-      $('namesInfo').textContent = file.name + ' (' + Object.keys(state.names).length + ' teachers)';
-      updateDlInfo();
-    } catch (e) { $('namesInfo').textContent = 'Could not read that file.'; }
+      cls.names = TT.parseCsv(await readFile(file, true));
+      $('c-namesInfo').textContent = file.name + ' (' + Object.keys(cls.names).length + ' teachers)';
+      updateNamesInfo();
+    } catch (e) { $('c-namesInfo').textContent = 'Could not read that file.'; }
   }
-
   function downloadSample() {
     var blob = new Blob(['\uFEFFInitial,Name,Department\r\n'], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'teacher_names_sample.csv';
+    a.href = URL.createObjectURL(blob); a.download = 'teacher_names_sample.csv';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
   }
+  $('c-names').addEventListener('change', function (e) { handleNames(e.target.files[0]); });
+  $('c-sample').addEventListener('click', downloadSample);
 
-  async function saveWorkbook(btn, suffix, builder) {
-    if (!state.recs) return;
-    var old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
-    try {
-      var wb = await builder();
-      var buf = await wb.xlsx.writeBuffer();
-      var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + suffix;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
-    } catch (e) { console.error(e); setStatus('Could not build the Excel file: ' + e.message, 'err'); }
-    btn.textContent = old; btn.disabled = false;
-  }
-  function download() {
-    return saveWorkbook($('dl'), '_database.xlsx', function () { return TT.buildWorkbook(ExcelJS, state.lessons, state.recs, state.names, { fileName: state.fileName }); });
-  }
-  function downloadClasses() {
-    return saveWorkbook($('dl2'), '_class_timetables.xlsx', function () { return TT.buildClassWorkbook(ExcelJS, state.lessons); });
-  }
+  // ====================== TEACHER TAB ======================
+  var tch = { pages: null, recs: null };
+  var teacherPanel = makePanel('t', {
+    emptyMsg: 'No lessons found. Is this the aSc teacher-timetable PDF (landscape, one teacher per page)?',
+    analyze: function (pages) {
+      var res = pages.map(function (pg, i) { var r = TT.parseTeacherPage(pg, i + 1); r.page = i + 1; return r; });
+      var problems = []; res.forEach(function (r) { problems = problems.concat(r.problems); });
+      TT.finalizeTeacherCards(res);
+      var out = TT.teacherRows(res);
+      if (!out.lessons.length) return null;
+      var v = TT.validateTeacher(res, out.recs);
+      tch.pages = res; tch.recs = out.recs;
+      var count = function (k) { return out.lessons.filter(function (l) { return l.kind === k; }).length; };
+      var w = '';
+      if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
+      if (v.noCode.length) w += '<p class="warn">Could not work out the teacher code for: ' + esc(v.noCode.slice(0, 8).join(', ')) + (v.noCode.length > 8 ? ', …' : '') + '. Their rows use the name instead of a code.</p>';
+      if (!problems.length && !v.noCode.length) w += '<p class="ok">Check passed: every lesson was placed and every teacher has a code.</p>';
+      if (v.emptyPages.length) w += '<p class="muted">' + v.emptyPages.length + ' teacher page(s) have no lessons: ' + esc(v.emptyPages.slice(0, 6).join(', ')) + (v.emptyPages.length > 6 ? ', …' : '') + '.</p>';
+      if (v.clashes.length) w += '<p class="muted">' + v.clashes.length + ' period(s) where a teacher has two lessons at the same time (both are listed): ' + esc(v.clashes.slice(0, 5).join('; ')) + (v.clashes.length > 5 ? '; …' : '') + '.</p>';
+      var unp = out.recs.filter(function (r) { return /^Not paired/.test(r.status); }).length;
+      if (unp) w += '<p class="muted">' + unp.toLocaleString() + ' row(s) are “Not paired”: the lesson has a different number of teachers and venues (and more than one venue), so the position rule cannot be applied. The full venue list is shown and the row is flagged in the “Pairing” column.</p>';
+      return {
+        total: out.recs.length,
+        stats: [['Teacher pages', res.length], ['Lessons', count('Lesson')], ['Meetings', count('Meeting')], ['Support', count('Support')], ['Excel rows', out.recs.length], ['Clash periods', v.clashes.length]],
+        warnHtml: w,
+        head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Lesson/Meeting/Support', 'Subject', 'Pairing'],
+        rows: out.recs.slice(0, 15).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.kind, r.subject, r.status]; })
+      };
+    },
+    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildTeacherDbWorkbook(ExcelJS, tch.recs, tch.pages, { fileName: st.fileName }); } },
+    btn2: { suffix: '_teacher_timetables.xlsx', build: function () { return TT.buildTeacherTimetableWorkbook(ExcelJS, tch.pages); } }
+  });
 
-  var drop = $('drop');
-  $('pdf').addEventListener('change', function (e) { handlePdf(e.target.files[0]); });
-  $('names').addEventListener('change', function (e) { handleNames(e.target.files[0]); });
-  $('dl').addEventListener('click', download);
-  $('dl2').addEventListener('click', downloadClasses);
-  $('sample').addEventListener('click', downloadSample);
-  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
-  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-  drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) handlePdf(f); });
-  window.__tt = { handlePdf: handlePdf, handleNames: handleNames, download: download, downloadClasses: downloadClasses, state: state };
+  // ====================== TABS ======================
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function showTab(name, focus) {
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-tab') === name;
+      t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1;
+      $('panel-' + t.getAttribute('data-tab')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { history.replaceState(null, '', '#' + name); } catch (e) { /* ignore (e.g. file:// previews) */ }
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { showTab(t.getAttribute('data-tab')); });
+    t.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; showTab(n.getAttribute('data-tab'), true); e.preventDefault(); }
+    });
+  });
+  if (location.hash === '#teacher') showTab('teacher');
+
+  window.__tt = {
+    showTab: showTab,
+    cls: { handlePdf: classPanel.handlePdf, handleNames: handleNames, download: classPanel.downloadDb, downloadClasses: classPanel.downloadSecond, state: cls, sample: downloadSample },
+    teacher: { handlePdf: teacherPanel.handlePdf, download: teacherPanel.downloadDb, downloadTeachers: teacherPanel.downloadSecond, state: tch }
+  };
 })();
 </script>
 </body>
