@@ -377,6 +377,49 @@
     return String(s == null ? '' : s).split('\n').reduce((a, ln) => a + Math.max(1, Math.ceil(ln.length / chars)), 0);
   }
 
+  // "Summary" sheet: how many rows have no venue (or subject) of their own, by subject (same table as on the page).
+  // The message is plain text; the counts are short formulas over the Timetable sheet (bounded ranges).
+  // subjCol = Subject column letter, pairCol = Pairing column letter in the Timetable sheet.
+  function addNoOwnSummary(wb, recs, subjCol, pairCol) {
+    const un = recs.filter(r => r.unmatched);
+    const by = {};
+    un.forEach(r => { const k = String(r.subject).split('\n')[0]; by[k] = (by[k] || 0) + 1; });
+    const keys = Object.keys(by).sort((a, b) => (by[b] - by[a]) || (a < b ? -1 : a > b ? 1 : 0));
+    const FONT = { name: 'Arial', size: 10 }, BOLD = { name: 'Arial', size: 10, bold: true };
+    const HF = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    const fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    const edge = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+    const border = { top: edge, left: edge, bottom: edge, right: edge };
+    const ws = wb.addWorksheet('Summary');
+    ws.columns = [{ width: 30 }, { width: 10 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }];
+    const last = Math.max(2, recs.length + 1);
+    const P = 'Timetable!$' + pairCol + '$2:$' + pairCol + '$' + last, S = 'Timetable!$' + subjCol + '$2:$' + subjCol + '$' + last;
+    ws.mergeCells('A1:F1');
+    const a1 = ws.getCell('A1');
+    a1.value = un.length + ' row(s) are teachers with no venue (or subject) of their own because the lesson has more teachers than venues (or subjects). ' +
+      'Their Venue/Subject cell shows the full list, a line break, then the teacher list. They are flagged in the \u201cPairing\u201d column.';
+    a1.font = FONT; a1.alignment = { wrapText: true, vertical: 'top' };
+    ws.getRow(1).height = 44;
+    const t = ws.getCell('A3'); t.value = 'What the ' + un.length + ' rows are'; t.font = BOLD;
+    ['Subject', 'Rows'].forEach((h, i) => {
+      const c = ws.getCell(4, i + 1); c.value = h; c.font = HF; c.fill = fill; c.border = border;
+      c.alignment = { horizontal: i ? 'right' : 'left', vertical: 'middle' };
+    });
+    keys.forEach((k, i) => {
+      const r = 5 + i;
+      const a = ws.getCell(r, 1); a.value = k; a.font = FONT; a.border = border;
+      const b = ws.getCell(r, 2);
+      b.value = { formula: 'COUNTIFS(' + P + ',"No own*",' + S + ',A' + r + '&"*")', result: by[k] };
+      b.font = FONT; b.border = border; b.alignment = { horizontal: 'right' };
+    });
+    const tr = 5 + keys.length;
+    const ta = ws.getCell(tr, 1); ta.value = 'Total'; ta.font = BOLD; ta.border = border;
+    const tb = ws.getCell(tr, 2);
+    tb.value = keys.length ? { formula: 'SUM(B5:B' + (tr - 1) + ')', result: un.length } : 0;
+    tb.font = BOLD; tb.border = border; tb.alignment = { horizontal: 'right' };
+    return ws;
+  }
+
   // ---- Build the workbook (ExcelJS) ----
   async function buildWorkbook(ExcelJS, lessons, recs, names, meta) {
     names = names || {};
@@ -424,6 +467,8 @@
         row.height = Math.max(15, 13 * Math.max(textLines(r.venue, 32), textLines(r.subject, 14)));
     });
     ws.autoFilter = { from: 'A1', to: 'K' + (recs.length + 1) };
+
+    addNoOwnSummary(wb, recs, 'G', 'J');
 
     // Sheet 2: Class Lessons
     const ws2 = wb.addWorksheet('Class Lessons', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -835,6 +880,7 @@ function finalizeTeacherCards(pagesResult){
         row.height = Math.max(15, 13 * Math.max(textLines(r.venue, 32), textLines(r.subject, 32)));
     });
     ws.autoFilter = { from: 'A1', to: 'L' + (recs.length + 1) };
+    addNoOwnSummary(wb, recs, 'H', 'K');
 
     const ws3 = wb.addWorksheet('Teacher Lookup', { views: [{ state: 'frozen', ySplit: 1 }] });
     ws3.columns = [{ header: 'Code', width: 10 }, { header: 'Name', width: 28 }, { header: 'Department / Subject', width: 34 }];
