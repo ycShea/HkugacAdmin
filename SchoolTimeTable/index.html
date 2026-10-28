@@ -39,20 +39,64 @@
   .stat { background:var(--drop); border-radius:10px; padding:10px 12px; }
   .stat b { display:block; font-size:1.3rem; }
   ul.w { margin:6px 0 0 18px; padding:0; font-size:.88rem; }
+  table.mini { width:auto; min-width:220px; margin:0 0 10px; }
+  table.mini td:last-child, table.mini th:last-child { text-align:right; }
   [hidden] { display:none !important; }
 </style>
 </head>
 <body>
 <nav class="tabs" role="tablist" aria-label="Timetable type">
-  <button class="tab" role="tab" id="tab-class" aria-selected="true" aria-controls="panel-class" data-tab="class">Class Timetable PDF → Excel</button>
-  <button class="tab" role="tab" id="tab-teacher" aria-selected="false" aria-controls="panel-teacher" data-tab="teacher" tabindex="-1">Teacher Timetable PDF → Excel</button>
+  <button class="tab" role="tab" id="tab-teacher" aria-selected="true" aria-controls="panel-teacher" data-tab="teacher">Teacher Timetable PDF → Excel</button>
+  <button class="tab" role="tab" id="tab-class" aria-selected="false" aria-controls="panel-class" data-tab="class" tabindex="-1">Class Timetable PDF → Excel</button>
 </nav>
 <main>
 
+<!-- ===================== TEACHER TAB ===================== -->
+<section id="panel-teacher" role="tabpanel" aria-labelledby="tab-teacher">
+  <h1>Teacher Timetable PDF → Excel</h1>
+  <p class="sub">Upload the aSc teacher-timetable PDF and download (1) one timetable sheet per teacher and (2) a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching | Lesson/Meeting/Support). Teacher names are read from the PDF itself. Everything runs in your browser.</p>
+
+  <div class="card">
+    <h2>1. Choose the PDF</h2>
+    <label class="drop" id="t-drop" for="t-pdf">
+      <strong>Drop the PDF here, or click to choose</strong>
+      <span>e.g. 2627_T1_Teacher_v2.pdf (one page per teacher)</span>
+    </label>
+    <input type="file" id="t-pdf" accept="application/pdf,.pdf">
+    <progress id="t-prog" value="0" max="1" hidden></progress>
+    <p id="t-status" class="status muted" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card">
+    <h2>2. Teacher list (CSV)</h2>
+    <p class="muted" style="margin-top:0">One list of teacher initials, names and departments (<code>Initial,Name,Department</code>), shared by the Teacher and Class tabs. It is created automatically when you read a Teacher PDF and is used to fill the “Teacher Name” column in the class database. You can also choose your own CSV. When a Teacher PDF is read and a list is already loaded, the PDF is checked against the list.</p>
+    <div class="row">
+      <input type="file" id="t-names" accept=".csv,text/csv">
+      <label for="t-names" class="btn sec">Choose teacher CSV</label>
+      <button type="button" class="btn sec" id="t-csv">Download sample CSV</button>
+    </div>
+    <p id="t-listInfo" class="muted" style="margin:10px 0 0">No teacher list loaded yet.</p>
+  </div>
+
+  <div class="card" id="t-result" hidden>
+    <h2>3. Result</h2>
+    <div class="stats" id="t-stats"></div>
+    <div id="t-warns"></div>
+    <div class="row" style="margin:12px 0">
+      <button class="btn" id="t-dl2" disabled>Download teacher timetables</button>
+      <button class="btn" id="t-dl" disabled>Download teacher database</button>
+      
+    </div>
+    <p class="muted" id="t-files" style="margin:0 0 6px"></p>
+    <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
+    <div class="scroll"><table id="t-prev"></table></div>
+  </div>
+</section>
+
 <!-- ===================== CLASS TAB ===================== -->
-<section id="panel-class" role="tabpanel" aria-labelledby="tab-class">
+<section id="panel-class" role="tabpanel" aria-labelledby="tab-class" hidden>
   <h1>Class Timetable PDF → Excel</h1>
-  <p class="sub">Upload the aSc class-timetable PDF and download a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching). Everything runs in your browser; the PDF is not uploaded anywhere.</p>
+  <p class="sub">Upload the aSc class-timetable PDF and download (1) one timetable sheet per class and (2) a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching). Everything runs in your browser; the PDF is not uploaded anywhere.</p>
 
   <div class="card">
     <h2>1. Choose the PDF</h2>
@@ -66,14 +110,14 @@
   </div>
 
   <div class="card">
-    <h2>2. Teacher names (optional)</h2>
-    <p class="muted" style="margin-top:0">The PDF only has teacher codes (e.g. KH, CSC). To fill the “Teacher Name” column, choose a CSV with the columns <code>Initial,Name,Department</code>. Use the sample button to get an empty file with these headers.</p>
+    <h2>2. Teacher list (CSV)</h2>
+    <p class="muted" style="margin-top:0">One list of teacher initials, names and departments (<code>Initial,Name,Department</code>), shared by the Teacher and Class tabs. It is created automatically when you read a Teacher PDF and is used to fill the “Teacher Name” column in the class database. You can also choose your own CSV. When a Teacher PDF is read and a list is already loaded, the PDF is checked against the list.</p>
     <div class="row">
       <input type="file" id="c-names" accept=".csv,text/csv">
       <label for="c-names" class="btn sec">Choose teacher CSV</label>
-      <button type="button" class="btn sec" id="c-sample">Download sample CSV</button>
-      <span id="c-namesInfo" class="muted">No file chosen</span>
+      <button type="button" class="btn sec" id="c-csv">Download sample CSV</button>
     </div>
+    <p id="c-listInfo" class="muted" style="margin:10px 0 0">No teacher list loaded yet.</p>
   </div>
 
   <div class="card" id="c-result" hidden>
@@ -81,41 +125,13 @@
     <div class="stats" id="c-stats"></div>
     <div id="c-warns"></div>
     <div class="row" style="margin:12px 0">
-      <button class="btn" id="c-dl" disabled>Download database Excel</button>
       <button class="btn" id="c-dl2" disabled>Download class timetables</button>
+      <button class="btn" id="c-dl" disabled>Download class database</button>
       <span class="muted" id="c-dlInfo"></span>
     </div>
-    <h2 style="margin-top:16px">Preview (first 15 rows)</h2>
+    <p class="muted" id="c-files" style="margin:0 0 6px"></p>
+    <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
     <div class="scroll"><table id="c-prev"></table></div>
-  </div>
-</section>
-
-<!-- ===================== TEACHER TAB ===================== -->
-<section id="panel-teacher" role="tabpanel" aria-labelledby="tab-teacher" hidden>
-  <h1>Teacher Timetable PDF → Excel</h1>
-  <p class="sub">Upload the aSc teacher-timetable PDF and download (1) a database-style Excel file (Teacher | Day | Period | Class | Venue | Co-teaching | Lesson/Meeting/Support) and (2) one timetable sheet per teacher. Teacher names are read from the PDF itself, so no teacher CSV is needed. Everything runs in your browser.</p>
-
-  <div class="card">
-    <h2>1. Choose the PDF</h2>
-    <label class="drop" id="t-drop" for="t-pdf">
-      <strong>Drop the PDF here, or click to choose</strong>
-      <span>e.g. 2627_T1_Teacher_v2.pdf (one page per teacher)</span>
-    </label>
-    <input type="file" id="t-pdf" accept="application/pdf,.pdf">
-    <progress id="t-prog" value="0" max="1" hidden></progress>
-    <p id="t-status" class="status muted" role="status" aria-live="polite"></p>
-  </div>
-
-  <div class="card" id="t-result" hidden>
-    <h2>2. Result</h2>
-    <div class="stats" id="t-stats"></div>
-    <div id="t-warns"></div>
-    <div class="row" style="margin:12px 0">
-      <button class="btn" id="t-dl" disabled>Download database Excel</button>
-      <button class="btn" id="t-dl2" disabled>Download teacher timetables</button>
-    </div>
-    <h2 style="margin-top:16px">Preview (first 15 rows)</h2>
-    <div class="scroll"><table id="t-prev"></table></div>
   </div>
 </section>
 
@@ -136,6 +152,9 @@
                  '12:10 - 13:00', '14:00 - 14:50', '14:50 - 15:40'];
   const BIG = 9;        // font size above this = subject line
   const ASC = 0.8;      // top = baseline - ASC * size
+  // Whole-level / group sessions: venues are NOT matched to teachers (everything is put together).
+  // Add other subject codes here if needed, e.g. /^(HD|MS|CASTLE|OPT\d*|XYZ)$/i
+  const GROUP_RE = /^(HD|MS|CASTLE|OPT\d*)$/i;
 
   function isTeacherLine(t) {
     if (t.indexOf('/') >= 0) return true;
@@ -252,28 +271,35 @@
   }
 
   // ---- Pair teachers / venues / subjects by position ----
-  // "AF / HC / SYC" with "601,602,603" => AF-601, HC-602, SYC-603 (same for subjects such as CH/BIO)
-  function pairLesson(L) {
-    const T = L.teachers, n = T.length;
-    const V = L.venue.split(',').map(s => s.trim()).filter(Boolean), m = V.length;
-    const S = L.subject.split('/').map(s => s.trim()).filter(Boolean), k = S.length;
-    const res = [];
-    let status;
-    if (n === m) status = 'Paired';
-    else if (m === 1) status = 'Shared venue';
-    else status = 'Not paired (' + n + ' teachers, ' + m + ' venues)';
-    for (let i = 0; i < n; i++) {
-      let venue, sharing;
-      if (status === 'Paired') { venue = V[i]; sharing = 1; }
-      else if (status === 'Shared venue') { venue = V[0]; sharing = n; }
-      else { venue = L.venue; sharing = n > m ? n : 1; }
-      let subject = L.subject, subjNote = '';
-      if (k === 1) subject = S[0];
-      else if (k === n) subject = S[i];
-      else subjNote = ' / subject not split (' + k + ' subjects, ' + n + ' teachers)';
-      res.push({ teacher: T[i], venue: venue, subject: subject, sharing: sharing, status: status + subjNote });
+  // "AF / HC / SYC" with "601,602,603" => AF-601, HC-602, SYC-603 (same for subjects such as CH/BIO).
+  // If there are more teachers than venues (or subjects) and more than one venue (subject):
+  //   the first teachers are paired by position; each remaining teacher gets the full list,
+  //   a line break, and the full teacher list.   e.g. "301,302,303\nAH / NC / DW / EL"
+  // A single venue (or subject) is shared by every teacher.
+  function pairOne(i, T, venueRaw, subjectRaw) {
+    const n = T.length, teachersText = T.join(' / ');
+    if (GROUP_RE.test(String(subjectRaw || '').trim())) {
+      return { venue: venueRaw, subject: subjectRaw, sharing: Math.max(n, 1), unmatched: false, group: true,
+               status: 'Group session (venues not matched to teachers)' };
     }
-    return res;
+    const V = venueRaw.split(',').map(s => s.trim()).filter(Boolean), m = V.length;
+    const S = subjectRaw.split('/').map(s => s.trim()).filter(Boolean), k = S.length;
+    let venue, sharing = 1, vstat, unmatched = false;
+    if (m === 0) { venue = ''; vstat = 'No venue'; }
+    else if (m === 1) { venue = V[0]; sharing = Math.max(n, 1); vstat = n > 1 ? 'Shared venue' : 'Paired'; }
+    else if (i < m) { venue = V[i]; vstat = n < m ? 'Paired (more venues than teachers)' : 'Paired'; }
+    else { venue = venueRaw + '\n' + teachersText; sharing = Math.max(2, n - m); unmatched = true;
+           vstat = 'No own venue (' + m + ' venues for ' + n + ' teachers)'; }
+    let subject, sstat = '';
+    if (k <= 1) subject = k === 1 ? S[0] : subjectRaw;
+    else if (i < k) { subject = S[i]; if (n < k) sstat = 'more subjects than teachers'; }
+    else { subject = subjectRaw + '\n' + teachersText; unmatched = true;
+           sstat = 'No own subject (' + k + ' subjects for ' + n + ' teachers)'; }
+    return { venue: venue, subject: subject, sharing: sharing, unmatched: unmatched, status: vstat + (sstat ? ' / ' + sstat : '') };
+  }
+
+  function pairLesson(L) {
+    return L.teachers.map((t, i) => Object.assign({ teacher: t }, pairOne(i, L.teachers, L.venue, L.subject)));
   }
 
   function expandRows(lessons) {
@@ -283,7 +309,7 @@
       for (let p = L.period; p < L.period + L.span; p++) {
         for (const q of pr) {
           recs.push({ teacher: q.teacher, day: L.day, period: p, cls: L.cls, rank: L.page, venue: q.venue, subject: q.subject,
-                      time: TIMES[p - 1], sharing: q.sharing, status: q.status });
+                      time: TIMES[p - 1], sharing: q.sharing, status: q.status, unmatched: q.unmatched, group: !!q.group });
         }
       }
     }
@@ -346,6 +372,11 @@
     return names;
   }
 
+  // estimated row height for wrapped text (Excel does not always auto-fit rows written by a program)
+  function textLines(s, chars) {
+    return String(s == null ? '' : s).split('\n').reduce((a, ln) => a + Math.max(1, Math.ceil(ln.length / chars)), 0);
+  }
+
   // ---- Build the workbook (ExcelJS) ----
   async function buildWorkbook(ExcelJS, lessons, recs, names, meta) {
     names = names || {};
@@ -385,8 +416,12 @@
       row.getCell(11).value = { formula: 'IFERROR(INDEX(\'Teacher Lookup\'!$B$2:$B$' + lastLk + ',MATCH(A' + n + ',\'Teacher Lookup\'!$A$2:$A$' + lastLk + ',0)),"")', result: nameOf(r.teacher) };
       for (let c = 1; c <= 11; c++) {
         const cell = row.getCell(c); cell.font = FONT;
-        if ([2, 3, 4, 6, 9].indexOf(c) >= 0) cell.alignment = { horizontal: 'center' };
+        if ([2, 3, 4, 6, 9].indexOf(c) >= 0) cell.alignment = { horizontal: 'center', vertical: 'top' };
+        else if (c === 5 || c === 7) cell.alignment = { wrapText: true, vertical: 'top' };
+        else cell.alignment = { vertical: 'top' };
       }
+      if (String(r.venue).indexOf('\n') >= 0 || String(r.subject).indexOf('\n') >= 0)
+        row.height = Math.max(15, 13 * Math.max(textLines(r.venue, 32), textLines(r.subject, 14)));
     });
     ws.autoFilter = { from: 'A1', to: 'K' + (recs.length + 1) };
 
@@ -434,8 +469,10 @@
       ['', false],
       ['Pairing rule (teachers / venues / subjects are matched by position)', true],
       ['"AF / HC / SYC" with venues "601,602,603" means AF uses 601, HC uses 602, SYC uses 603. Subjects pair the same way (e.g. CH/BIO with TH / NYC and 604,213: TH teaches CH in 604, NYC teaches BIO in 213).', false],
-      ['Paired: number of teachers = number of venues. Shared venue: one venue for several teachers (all share it). Not paired: counts differ and more than one venue, so the position rule cannot be applied; the full venue list is shown and the row is flagged in column J.', false],
-      ['Co-teaching = Y when more than one teacher uses the same venue in the same lesson (column I > 1), otherwise N. For "Not paired" rows column I is an estimate (teachers if teachers > venues, else 1).', false],
+      ['Paired: the teacher gets the venue (and subject) in the same position. Shared venue: a lesson with one venue; every teacher uses it.', false],
+      ['More teachers than venues (or subjects), with more than one venue: the first teachers are paired by position. Each remaining teacher gets the full venue list, a line break, then the full teacher list (for example "301,302,303,207B,311,308,409" then "AH / NC / DW / EL / CK / STC / AYI / CT / HH"). The same applies to subjects (for example "EC/PEDSE" then "ALC / EL / HH"). These rows are flagged "No own venue / subject" in column J.', false],
+      ['Group sessions (HD, MS, CASTLE, OPT1, OPT2, OPT3 ...) are not matched: every teacher row shows the full venue list, and the status is "Group session".', false],
+      ['Co-teaching = Y when more than one teacher uses the same venue in the same lesson (column I > 1), otherwise N. For teachers with no own venue, column I is an estimate (at least 2).', false],
       ['', false],
       ['Limitations', true],
       ['1. Grouped lessons list all teachers on every participating class page. The PDF does not say which class each teacher takes, so the Class column lists every class in the group (e.g. S2H/S2K/S2U).', false],
@@ -642,25 +679,61 @@ function finalizeTeacherCards(pagesResult){
   function nameOnly(full) { const m = String(full).match(/^(.*?)\s*\((.*)\)\s*$/); return m ? m[1] : String(full); }
   function deptOnly(full) { const m = String(full).match(/^(.*?)\s*\((.*)\)\s*$/); return m ? m[2] : ''; }
 
+  function csvCell(s) { s = String(s == null ? '' : s); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+  // Teacher list for the Class tab: Initial,Name,Department (only pages whose code was found)
+  function buildTeacherCsv(pages) {
+    const rows = pages.filter(p => p.code).map(p => [p.code, nameOnly(p.name), deptOnly(p.name)])
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    return '\uFEFF' + ['Initial,Name,Department'].concat(rows.map(r => r.map(csvCell).join(','))).join('\r\n') + '\r\n';
+  }
+
+  // Shared teacher list: { CODE: { name, dept } }
+  function namesToCsv(names) {
+    const rows = Object.keys(names).sort().map(c => [c, names[c].name, names[c].dept]);
+    return '\uFEFF' + ['Initial,Name,Department'].concat(rows.map(r => r.map(csvCell).join(','))).join('\r\n') + '\r\n';
+  }
+  function namesFromPages(res) {
+    const names = {}, leftOut = [];
+    res.forEach(p => { if (p.code) names[p.code] = { name: nameOnly(p.name), dept: deptOnly(p.name) }; else leftOut.push(p.name); });
+    return { names: names, leftOut: leftOut };
+  }
+  // Check the teacher pages against a loaded list. A page whose code could not be found in the PDF
+  // takes its code from the list when name and department match. Everything else is only reported.
+  function verifyTeacherList(res, names) {
+    const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+    const byName = {};
+    Object.keys(names).forEach(c => { byName[norm(names[c].name) + '|' + norm(names[c].dept)] = c; });
+    const rep = { total: res.length, matched: 0, diffs: [], notInList: [], notInPdf: [], recovered: [], stillNoCode: [] };
+    res.forEach(p => {
+      if (p.code) return;
+      const c = byName[norm(nameOnly(p.name)) + '|' + norm(deptOnly(p.name))];
+      if (c) {
+        p.code = c; p.cards.forEach(card => { if (!card.teachers.length) card.teachers = [c]; });
+        rep.recovered.push(p.name + ' \u2192 ' + c);
+      } else rep.stillNoCode.push(p.name);
+    });
+    const used = {};
+    res.forEach(p => {
+      if (!p.code) return;
+      used[p.code] = true;
+      const e = names[p.code];
+      if (!e) { rep.notInList.push(p.code + ' (' + p.name + ')'); return; }
+      if (norm(e.name) !== norm(nameOnly(p.name)) || norm(e.dept) !== norm(deptOnly(p.name)))
+        rep.diffs.push(p.code + ': PDF has \u201c' + p.name + '\u201d, list has \u201c' + e.name + (e.dept ? ' (' + e.dept + ')' : '') + '\u201d');
+      else rep.matched++;
+    });
+    Object.keys(names).sort().forEach(c => { if (!used[c]) rep.notInPdf.push(c + ' (' + names[c].name + (names[c].dept ? ', ' + names[c].dept : '') + ')'); });
+    return rep;
+  }
+
   function pairTeacherCard(card, code) {
     const kind = card.kind === 'Other' ? 'Lesson' : card.kind;
     if (kind !== 'Lesson') {
-      return { venue: card.venue, subject: card.subject || card.name, sharing: 1, status: kind };
+      return { venue: card.venue, subject: card.subject || card.name, sharing: 1, unmatched: false, status: kind };
     }
-    const T = card.teachers, n = T.length, idx = T.indexOf(code);
-    const V = card.venue.split(',').map(s => s.trim()).filter(Boolean), m = V.length;
-    const S = (card.subject || '').split('/').map(s => s.trim()).filter(Boolean), k = S.length;
-    let venue, sharing, status;
-    if (idx < 0 && n > 0) { venue = card.venue; sharing = 1; status = 'Teacher not in lesson list'; }
-    else if (n === m && m > 0) { venue = V[idx]; sharing = 1; status = 'Paired'; }
-    else if (m === 1) { venue = V[0]; sharing = Math.max(n, 1); status = 'Shared venue'; }
-    else if (m === 0) { venue = ''; sharing = 1; status = 'No venue'; }
-    else { venue = card.venue; sharing = n > m ? n : 1; status = 'Not paired (' + n + ' teachers, ' + m + ' venues)'; }
-    let subject = card.subject || '';
-    if (k === 1) subject = S[0];
-    else if (k > 1 && k === n && idx >= 0) subject = S[idx];
-    else if (k > 1) status += ' / subject not split (' + k + ' subjects, ' + n + ' teachers)';
-    return { venue: venue, subject: subject, sharing: sharing, status: status };
+    const idx = card.teachers.indexOf(code);
+    if (idx < 0) return { venue: card.venue, subject: card.subject || '', sharing: 1, unmatched: false, status: 'Teacher not in lesson list' };
+    return pairOne(idx, card.teachers, card.venue || '', card.subject || '');
   }
 
   // pages: result of parseTeacherPage for each page (after finalizeTeacherCards)
@@ -676,7 +749,7 @@ function finalizeTeacherCards(pagesResult){
           subject: pr.subject || card.subject || card.name, classes: card.classes || '', teachers: card.teachers, venue: card.venue, clash: !!card.clash });
         for (let q = card.period; q < card.period + card.span; q++) {
           recs.push({ teacher: code || nameOnly(tname), day: card.day, period: q, cls: card.classes || '', venue: pr.venue, kind: kind,
-                      subject: pr.subject, time: TIMES[q - 1], sharing: pr.sharing, status: pr.status, tname: nameOnly(tname), page: p.page, clash: !!card.clash });
+                      subject: pr.subject, time: TIMES[q - 1], sharing: pr.sharing, status: pr.status, unmatched: pr.unmatched, group: !!pr.group, tname: nameOnly(tname), page: p.page, clash: !!card.clash });
         }
       });
     });
@@ -719,8 +792,12 @@ function finalizeTeacherCards(pagesResult){
       row.getCell(10).value = r.sharing; row.getCell(11).value = r.status; row.getCell(12).value = r.tname;
       for (let c = 1; c <= 12; c++) {
         const cell = row.getCell(c); cell.font = FONT;
-        if ([2, 3, 6, 7, 10].indexOf(c) >= 0) cell.alignment = { horizontal: 'center' };
+        if ([2, 3, 6, 7, 10].indexOf(c) >= 0) cell.alignment = { horizontal: 'center', vertical: 'top' };
+        else if (c === 5 || c === 8) cell.alignment = { wrapText: true, vertical: 'top' };
+        else cell.alignment = { vertical: 'top' };
       }
+      if (String(r.venue).indexOf('\n') >= 0 || String(r.subject).indexOf('\n') >= 0)
+        row.height = Math.max(15, 13 * Math.max(textLines(r.venue, 32), textLines(r.subject, 32)));
     });
     ws.autoFilter = { from: 'A1', to: 'L' + (recs.length + 1) };
 
@@ -748,8 +825,10 @@ function finalizeTeacherCards(pagesResult){
       ['', false],
       ['Pairing rule (teachers / venues / subjects are matched by position)', true],
       ['"AF / HC / SYC" with venues "601,602,603" means AF uses 601, HC uses 602, SYC uses 603. Subjects pair the same way (e.g. CH/BIO with TH / NYC and 604,213). The Venue and Subject shown are the ones that belong to this teacher.', false],
-      ['Paired: number of teachers = number of venues. Shared venue: one venue for several teachers. Not paired: counts differ and there is more than one venue, so the position rule cannot be applied; the full venue list is shown and the row is flagged in column K.', false],
-      ['Co-teaching = Y when more than one teacher uses the same venue in the same lesson (column J > 1), otherwise N. Meetings and support rows are N.', false],
+      ['Paired: the teacher gets the venue (and subject) in the same position. Shared venue: a lesson with one venue; every teacher uses it.', false],
+      ['More teachers than venues (or subjects), with more than one venue: the first teachers are paired by position. Each remaining teacher gets the full venue list, a line break, then the full teacher list (for example "301,302,303,207B,311,308,409" then "AH / NC / DW / EL / CK / STC / AYI / CT / HH"). The same applies to subjects (for example "EC/PEDSE" then "ALC / EL / HH"). These rows are flagged "No own venue / subject" in column K.', false],
+      ['Group sessions (HD, MS, CASTLE, OPT1, OPT2, OPT3 ...) are not matched: every teacher row shows the full venue list, and the status is "Group session".', false],
+      ['Co-teaching = Y when more than one teacher uses the same venue in the same lesson (column J > 1), otherwise N. Meetings and support rows are N. For teachers with no own venue, column J is an estimate (at least 2).', false],
       ['', false],
       ['Limitations', true],
       ['1. If a teacher has two lessons in the same period (a clash), both are listed in that period.', false],
@@ -796,6 +875,7 @@ function finalizeTeacherCards(pagesResult){
           g.font = FONT; g.border = border; g.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
         }
       }
+      const rowLines = [1, 1, 1, 1, 1, 1, 1];
       p.cards.forEach(card => {
         const kind = card.kind === 'Other' ? 'Lesson' : card.kind;
         const pr = pairTeacherCard(card, p.code || '');
@@ -806,15 +886,17 @@ function finalizeTeacherCards(pagesResult){
         for (let q = card.period; q < card.period + card.span; q++) {
           const cell = ws.getCell(q + 1, col);
           cell.value = cell.value ? cell.value + '\n' + text : text;   // clash: both lessons shown
+          rowLines[q - 1] = Math.max(rowLines[q - 1], textLines(cell.value, 22));
         }
       });
+      rowLines.forEach((n, q) => { ws.getRow(q + 2).height = Math.max(44, 13 * n + 4); });
       const nm = ws.getCell(10, 1); nm.value = p.name; nm.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF595959' } };
     });
     return wb;
   }
 
   root.TT = { readPdf, parsePage, pairLesson, expandRows, validate, parseCsv, buildWorkbook, buildClassWorkbook,
-    parseTeacherPage, finalizeTeacherCards, teacherRows, validateTeacher, buildTeacherDbWorkbook, buildTeacherTimetableWorkbook, DAYS, TIMES };
+    parseTeacherPage, finalizeTeacherCards, teacherRows, validateTeacher, buildTeacherCsv, namesToCsv, namesFromPages, verifyTeacherList, buildTeacherDbWorkbook, buildTeacherTimetableWorkbook, DAYS, TIMES };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -837,9 +919,53 @@ function finalizeTeacherCards(pagesResult){
       if (asText) fr.readAsText(file); else fr.readAsArrayBuffer(file);
     });
   }
+  function saveBlob(blob, name) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  }
+
+  // ====================== SHARED TEACHER LIST (step 2 of both tabs) ======================
+  var TL = { names: {}, source: null, label: '', leftOut: [] };   // source: null | 'csv' | 'pdf'
+  var prefix = '2627';                                            // taken from the last PDF name when it starts with 4 digits
+  function hasList() { return Object.keys(TL.names).length > 0; }
+
+  function renderList() {
+    var n = Object.keys(TL.names).length, info;
+    if (!n) info = 'No teacher list loaded yet. It is created when you read a Teacher PDF, or choose a CSV.';
+    else if (TL.source === 'pdf') info = 'From ' + TL.label + ': ' + n + ' teachers with codes' +
+      (TL.leftOut.length ? ' (' + TL.leftOut.length + ' without a code are left out: ' + TL.leftOut.join('; ') + ')' : '') + '.';
+    else info = TL.label + ': ' + n + ' teachers.';
+    ['t', 'c'].forEach(function (p) {
+      $(p + '-listInfo').textContent = info;
+      $(p + '-csv').textContent = n ? 'Download teacher list (CSV)' : 'Download sample CSV';
+    });
+    $('c-dlInfo').textContent = n ? 'Teacher names: ' + n + ' loaded.' : 'No teacher list loaded (Teacher Name column will be blank).';
+  }
+  async function handleNames(file) {
+    if (!file) return;
+    try {
+      var names = TT.parseCsv(await readFile(file, true));
+      if (!Object.keys(names).length) {
+        ['t', 'c'].forEach(function (p) { $(p + '-listInfo').textContent = 'No teachers found in that file. It needs the columns Initial,Name,Department.'; });
+        return;
+      }
+      TL = { names: names, source: 'csv', label: file.name, leftOut: [] };
+      renderList();
+    } catch (e) { ['t', 'c'].forEach(function (p) { $(p + '-listInfo').textContent = 'Could not read that file.'; }); }
+  }
+  function downloadList() {
+    if (hasList()) saveBlob(new Blob([TT.namesToCsv(TL.names)], { type: 'text/csv;charset=utf-8' }), prefix + '_teacher_names.csv');
+    else saveBlob(new Blob(['\uFEFFInitial,Name,Department\r\n'], { type: 'text/csv;charset=utf-8' }), prefix + '_teacher_names_sample.csv');
+  }
+  ['t', 'c'].forEach(function (p) {
+    $(p + '-names').addEventListener('change', function (e) { handleNames(e.target.files[0]); e.target.value = ''; });
+    $(p + '-csv').addEventListener('click', downloadList);
+  });
 
   // ---------- generic panel: drop zone, progress, result card, downloads ----------
-  // cfg.analyze(pages, fileName) -> { stats, warnHtml, head, rows, store } ; cfg.btn1 / cfg.btn2 = { suffix, build() }
+  // cfg.analyze(pages, fileName) -> { stats, warnHtml, head, rows, total } ; cfg.btn1 = database, cfg.btn2 = timetables
   function makePanel(p, cfg) {
     var state = { ready: false, fileName: '' };
     var el = function (s) { return $(p + '-' + s); };
@@ -849,6 +975,7 @@ function finalizeTeacherCards(pagesResult){
       if (!file) return;
       if (!window.pdfjsLib || !window.ExcelJS) { setStatus('The PDF and Excel libraries could not be loaded. Check your internet connection and reload.', 'err'); return; }
       state.fileName = file.name; state.ready = false;
+      var m = /^(\d{4})/.exec(file.name); prefix = m ? m[1] : '2627';
       el('result').hidden = true; el('dl').disabled = true; el('dl2').disabled = true;
       var prog = el('prog'); prog.hidden = false; prog.value = 0;
       setStatus('Reading ' + file.name + '…');
@@ -863,7 +990,8 @@ function finalizeTeacherCards(pagesResult){
         el('prev').innerHTML = '<tr>' + r.head.map(function (h) { return '<th>' + h + '</th>'; }).join('') + '</tr>' +
           r.rows.map(function (row) { return '<tr>' + row.map(function (c) { return '<td>' + esc(String(c)) + '</td>'; }).join('') + '</tr>'; }).join('');
         el('result').hidden = false; el('dl').disabled = false; el('dl2').disabled = false;
-        if (cfg.onReady) cfg.onReady(el);
+        var base = file.name.replace(/\.pdf$/i, '') || 'timetable';
+        el('files').textContent = 'Files: ' + base + cfg.btn2.suffix + '  |  ' + base + cfg.btn1.suffix;
         setStatus('Done. ' + r.total.toLocaleString() + ' rows ready.', 'ok');
       } catch (e) {
         console.error(e); setStatus('Could not read this PDF: ' + (e && e.message ? e.message : e), 'err');
@@ -877,12 +1005,8 @@ function finalizeTeacherCards(pagesResult){
       try {
         var wb = await which.build(state);
         var buf = await wb.xlsx.writeBuffer();
-        var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + which.suffix;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+        saveBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+          (state.fileName.replace(/\.pdf$/i, '') || 'timetable') + which.suffix);
       } catch (e) { console.error(e); setStatus('Could not build the Excel file: ' + e.message, 'err'); }
       btn.textContent = old; btn.disabled = false;
     }
@@ -898,12 +1022,76 @@ function finalizeTeacherCards(pagesResult){
     return { handlePdf: handlePdf, state: state, downloadDb: function () { return save(el('dl'), cfg.btn1); }, downloadSecond: function () { return save(el('dl2'), cfg.btn2); } };
   }
 
-  // ====================== CLASS TAB ======================
-  var cls = { lessons: null, recs: null, names: {} };
-  function updateNamesInfo() {
-    var n = Object.keys(cls.names).length;
-    $('c-dlInfo').textContent = n ? 'Teacher names: ' + n + ' loaded.' : 'No teacher names loaded (Teacher Name column will be blank).';
+  // breakdown of the rows that have no venue/subject of their own, by subject
+  function breakdownHtml(rows) {
+    var by = {};
+    rows.forEach(function (r) { var k = String(r.subject).split('\n')[0]; by[k] = (by[k] || 0) + 1; });
+    var keys = Object.keys(by).sort(function (a, b) { return (by[b] - by[a]) || (a < b ? -1 : a > b ? 1 : 0); });
+    return '<p class="muted" style="margin-bottom:4px"><b>What the ' + rows.length.toLocaleString() + ' rows are</b></p><table class="mini"><tr><th>Subject</th><th>Rows</th></tr>' +
+      keys.map(function (k) { return '<tr><td>' + esc(k) + '</td><td>' + by[k] + '</td></tr>'; }).join('') + '</table>';
   }
+
+  // ====================== TEACHER TAB ======================
+  var tch = { pages: null, recs: null };
+  function listCheckHtml(rep, label, replaced) {
+    if (!rep) return '<p class="muted">No teacher list was loaded, so there was nothing to check. A teacher list was created from this PDF (step 2).</p>';
+    var cap = function (arr) { return arr.slice(0, 8).map(esc).map(li).join('') + (arr.length > 8 ? '<li>… and ' + (arr.length - 8) + ' more</li>' : ''); };
+    var clean = !rep.diffs.length && !rep.notInList.length && !rep.notInPdf.length && !rep.stillNoCode.length;
+    var h = '<p class="' + (clean ? 'ok' : 'warn') + '"><b>Teacher list check</b> (against ' + esc(label) + '): ' + rep.matched + ' of ' + rep.total + ' teacher pages match the list.</p>';
+    if (rep.diffs.length) h += '<p class="warn" style="margin-bottom:0">Different name or department:</p><ul class="w">' + cap(rep.diffs) + '</ul>';
+    if (rep.notInList.length) h += '<p class="warn" style="margin-bottom:0">In the PDF but not in the list:</p><ul class="w">' + cap(rep.notInList) + '</ul>';
+    if (rep.notInPdf.length) h += '<p class="warn" style="margin-bottom:0">In the list but not in the PDF:</p><ul class="w">' + cap(rep.notInPdf) + '</ul>';
+    if (rep.stillNoCode.length) h += '<p class="warn" style="margin-bottom:0">No code in the PDF and no matching name in the list:</p><ul class="w">' + cap(rep.stillNoCode) + '</ul>';
+    if (rep.recovered.length) h += '<p class="muted" style="margin-bottom:0">Code taken from the list (the PDF has no lessons to work it out from):</p><ul class="w">' + cap(rep.recovered) + '</ul>';
+    h += '<p class="muted">' + (replaced ? 'The teacher list was then updated from this PDF.' : 'Your uploaded CSV stays as the teacher list.') + '</p>';
+    return h;
+  }
+  var teacherPanel = makePanel('t', {
+    emptyMsg: 'No lessons found. Is this the aSc teacher-timetable PDF (landscape, one teacher per page)?',
+    analyze: function (pages, fileName) {
+      var res = pages.map(function (pg, i) { var r = TT.parseTeacherPage(pg, i + 1); r.page = i + 1; return r; });
+      var problems = []; res.forEach(function (r) { problems = problems.concat(r.problems); });
+      TT.finalizeTeacherCards(res);
+      // check against the loaded list (from a CSV or an earlier Teacher PDF) before it is replaced
+      var listBefore = hasList(), labelBefore = TL.label, keepCsv = TL.source === 'csv';
+      var rep = listBefore ? TT.verifyTeacherList(res, TL.names) : null;
+      var out = TT.teacherRows(res);
+      if (!out.lessons.length) return null;
+      var v = TT.validateTeacher(res, out.recs);
+      tch.pages = res; tch.recs = out.recs;
+      if (!keepCsv) {
+        var nf = TT.namesFromPages(res);
+        TL = { names: nf.names, source: 'pdf', label: 'Teacher PDF ' + fileName, leftOut: nf.leftOut };
+      }
+      renderList();
+      var count = function (k) { return out.lessons.filter(function (l) { return l.kind === k; }).length; };
+      var w = '';
+      if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
+      if (v.noCode.length) w += '<p class="warn">Could not work out the teacher code for: ' + esc(v.noCode.slice(0, 8).join(', ')) + (v.noCode.length > 8 ? ', …' : '') + '. Their rows use the name instead of a code.</p>';
+      if (!problems.length && !v.noCode.length) w += '<p class="ok">Check passed: every lesson was placed and every teacher has a code.</p>';
+      w += listCheckHtml(rep, labelBefore, !keepCsv);
+      var empties = res.filter(function (r) { return !r.cards.length; }).map(function (r) { return r.name; });
+      if (empties.length) w += '<p class="err"><b>' + empties.length + ' teacher page(s) have no lessons: ' + esc(empties.slice(0, 6).join(', ')) + (empties.length > 6 ? ', …' : '') + '.</b></p>';
+      if (v.clashes.length) w += '<p class="muted">' + v.clashes.length + ' period(s) where a teacher has two lessons at the same time (both are listed): ' + esc(v.clashes.slice(0, 5).join('; ')) + (v.clashes.length > 5 ? '; …' : '') + '.</p>';
+      var unmatched = out.recs.filter(function (r) { return r.unmatched; });
+      if (unmatched.length) {
+        w += '<p class="muted">' + unmatched.length.toLocaleString() + ' row(s) are teachers with no venue (or subject) of their own because the lesson has more teachers than venues (or subjects). Their Venue/Subject cell shows the full list, a line break, then the teacher list. They are flagged in the “Pairing” column.</p>';
+        w += breakdownHtml(unmatched);
+      }
+      return {
+        total: out.recs.length,
+        stats: [['Teacher pages', res.length], ['Lessons', count('Lesson')], ['Meetings', count('Meeting')], ['Support', count('Support')], ['Excel rows', out.recs.length], ['Clash periods', v.clashes.length]],
+        warnHtml: w,
+        head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Lesson/Meeting/Support', 'Subject', 'Pairing'],
+        rows: out.recs.slice(0, 10).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.kind, r.subject, r.status]; })
+      };
+    },
+    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildTeacherDbWorkbook(ExcelJS, tch.recs, tch.pages, { fileName: st.fileName }); } },
+    btn2: { suffix: '_teacher_timetables.xlsx', build: function () { return TT.buildTeacherTimetableWorkbook(ExcelJS, tch.pages); } }
+  });
+
+  // ====================== CLASS TAB ======================
+  var cls = { lessons: null, recs: null };
   var classPanel = makePanel('c', {
     emptyMsg: 'No lessons found. Is this the aSc class-timetable PDF (landscape, one class per page)?',
     analyze: function (pages) {
@@ -913,77 +1101,27 @@ function finalizeTeacherCards(pagesResult){
       var v = TT.validate(lessons), recs = TT.expandRows(lessons);
       cls.lessons = lessons; cls.recs = recs;
       var doubles = lessons.filter(function (l) { return l.span > 1; }).length;
-      var paired = recs.filter(function (r) { return r.status === 'Paired'; }).length;
-      var shared = recs.filter(function (r) { return r.status === 'Shared venue'; }).length;
-      var unpaired = recs.length - paired - shared;
+      var unpaired = recs.filter(function (r) { return r.unmatched; }).length;
+      var paired = recs.length - unpaired, groups = recs.filter(function (r) { return r.group; }).length;
       var w = '';
       if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
       if (v.warn.length) w += '<p class="warn"><b>Overlapping lessons:</b></p><ul class="w">' + v.warn.slice(0, 8).map(esc).map(li).join('') + '</ul>';
       if (v.notFull.length) w += '<p class="warn">' + v.notFull.length + ' class-day(s) do not add up to 7 periods (' + esc(v.notFull.slice(0, 8).join(', ')) + (v.notFull.length > 8 ? ', …' : '') + '). This can be normal for a nearly empty class page, but please check them against the PDF.</p>';
       if (!problems.length && !v.warn.length && !v.notFull.length) w += '<p class="ok">Check passed: every class-day adds up to 7 periods with no overlaps.</p>';
-      if (unpaired) w += '<p class="muted">“Not paired” rows are lessons where the number of teachers and venues differ (and there is more than one venue), so the position rule cannot be applied. They are flagged in the “Pairing” column.</p>';
+      if (unpaired) {
+        w += '<p class="muted">' + unpaired.toLocaleString() + ' row(s) are teachers with no venue (or subject) of their own because the lesson has more teachers than venues (or subjects). Their Venue/Subject cell shows the full list, a line break, then the teacher list. They are flagged in the “Pairing” column.</p>';
+        w += breakdownHtml(recs.filter(function (r) { return r.unmatched; }));
+      }
       return {
         total: recs.length,
-        stats: [['Class pages', pages.length], ['Lessons', lessons.length], ['Double periods', doubles], ['Excel rows', recs.length], ['Paired rows', paired + shared], ['Not paired rows', unpaired]],
+        stats: [['Class pages', pages.length], ['Lessons', lessons.length], ['Double periods', doubles], ['Excel rows', recs.length], ['Paired rows', paired - groups], ['Group session rows', groups], ['No own venue/subject', unpaired]],
         warnHtml: w,
         head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Subject', 'Pairing'],
-        rows: recs.slice(0, 15).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; })
+        rows: recs.slice(0, 10).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; })
       };
     },
-    onReady: updateNamesInfo,
-    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildWorkbook(ExcelJS, cls.lessons, cls.recs, cls.names, { fileName: st.fileName }); } },
+    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildWorkbook(ExcelJS, cls.lessons, cls.recs, TL.names, { fileName: st.fileName }); } },
     btn2: { suffix: '_class_timetables.xlsx', build: function () { return TT.buildClassWorkbook(ExcelJS, cls.lessons); } }
-  });
-
-  async function handleNames(file) {
-    if (!file) return;
-    try {
-      cls.names = TT.parseCsv(await readFile(file, true));
-      $('c-namesInfo').textContent = file.name + ' (' + Object.keys(cls.names).length + ' teachers)';
-      updateNamesInfo();
-    } catch (e) { $('c-namesInfo').textContent = 'Could not read that file.'; }
-  }
-  function downloadSample() {
-    var blob = new Blob(['\uFEFFInitial,Name,Department\r\n'], { type: 'text/csv;charset=utf-8' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'teacher_names_sample.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
-  }
-  $('c-names').addEventListener('change', function (e) { handleNames(e.target.files[0]); });
-  $('c-sample').addEventListener('click', downloadSample);
-
-  // ====================== TEACHER TAB ======================
-  var tch = { pages: null, recs: null };
-  var teacherPanel = makePanel('t', {
-    emptyMsg: 'No lessons found. Is this the aSc teacher-timetable PDF (landscape, one teacher per page)?',
-    analyze: function (pages) {
-      var res = pages.map(function (pg, i) { var r = TT.parseTeacherPage(pg, i + 1); r.page = i + 1; return r; });
-      var problems = []; res.forEach(function (r) { problems = problems.concat(r.problems); });
-      TT.finalizeTeacherCards(res);
-      var out = TT.teacherRows(res);
-      if (!out.lessons.length) return null;
-      var v = TT.validateTeacher(res, out.recs);
-      tch.pages = res; tch.recs = out.recs;
-      var count = function (k) { return out.lessons.filter(function (l) { return l.kind === k; }).length; };
-      var w = '';
-      if (problems.length) w += '<p class="warn"><b>Could not place some text:</b></p><ul class="w">' + problems.slice(0, 8).map(esc).map(li).join('') + '</ul>';
-      if (v.noCode.length) w += '<p class="warn">Could not work out the teacher code for: ' + esc(v.noCode.slice(0, 8).join(', ')) + (v.noCode.length > 8 ? ', …' : '') + '. Their rows use the name instead of a code.</p>';
-      if (!problems.length && !v.noCode.length) w += '<p class="ok">Check passed: every lesson was placed and every teacher has a code.</p>';
-      if (v.emptyPages.length) w += '<p class="muted">' + v.emptyPages.length + ' teacher page(s) have no lessons: ' + esc(v.emptyPages.slice(0, 6).join(', ')) + (v.emptyPages.length > 6 ? ', …' : '') + '.</p>';
-      if (v.clashes.length) w += '<p class="muted">' + v.clashes.length + ' period(s) where a teacher has two lessons at the same time (both are listed): ' + esc(v.clashes.slice(0, 5).join('; ')) + (v.clashes.length > 5 ? '; …' : '') + '.</p>';
-      var unp = out.recs.filter(function (r) { return /^Not paired/.test(r.status); }).length;
-      if (unp) w += '<p class="muted">' + unp.toLocaleString() + ' row(s) are “Not paired”: the lesson has a different number of teachers and venues (and more than one venue), so the position rule cannot be applied. The full venue list is shown and the row is flagged in the “Pairing” column.</p>';
-      return {
-        total: out.recs.length,
-        stats: [['Teacher pages', res.length], ['Lessons', count('Lesson')], ['Meetings', count('Meeting')], ['Support', count('Support')], ['Excel rows', out.recs.length], ['Clash periods', v.clashes.length]],
-        warnHtml: w,
-        head: ['Teacher', 'Day', 'Period', 'Class', 'Venue', 'Co-teaching', 'Lesson/Meeting/Support', 'Subject', 'Pairing'],
-        rows: out.recs.slice(0, 15).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.kind, r.subject, r.status]; })
-      };
-    },
-    btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildTeacherDbWorkbook(ExcelJS, tch.recs, tch.pages, { fileName: st.fileName }); } },
-    btn2: { suffix: '_teacher_timetables.xlsx', build: function () { return TT.buildTeacherTimetableWorkbook(ExcelJS, tch.pages); } }
   });
 
   // ====================== TABS ======================
@@ -1003,11 +1141,13 @@ function finalizeTeacherCards(pagesResult){
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; showTab(n.getAttribute('data-tab'), true); e.preventDefault(); }
     });
   });
-  if (location.hash === '#teacher') showTab('teacher');
+  if (location.hash === '#class') showTab('class');
+  renderList();
 
   window.__tt = {
     showTab: showTab,
-    cls: { handlePdf: classPanel.handlePdf, handleNames: handleNames, download: classPanel.downloadDb, downloadClasses: classPanel.downloadSecond, state: cls, sample: downloadSample },
+    list: { upload: handleNames, download: downloadList, get: function () { return TL; }, prefix: function () { return prefix; } },
+    cls: { handlePdf: classPanel.handlePdf, download: classPanel.downloadDb, downloadClasses: classPanel.downloadSecond, state: cls },
     teacher: { handlePdf: teacherPanel.handlePdf, download: teacherPanel.downloadDb, downloadTeachers: teacherPanel.downloadSecond, state: tch }
   };
 })();

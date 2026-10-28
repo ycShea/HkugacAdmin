@@ -2,70 +2,109 @@
 
 🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/)**
 
-A single-file, browser-based tool that converts **aSc Timetables** PDF exports (class or teacher timetables) into database-style Excel files. Everything runs locally in your browser; no PDF is uploaded anywhere.
+A single-page web tool that turns the PDF timetables exported from **aSc Timetables** into Excel files:
 
-## 🚀 Features
-- **Browser-Based & Private:** Runs 100% locally in your browser; no server uploads required.
-- **Class & Teacher Parsing:** Converts both class and teacher aSc timetable PDF exports into structured Excel sheets.
-- **Smart Pairing & Interpretation:** Automatically handles co-teaching logic, double periods, merged cells, and shared venues/subjects.
-- **Data Validation:** Provides immediate feedback with stats, clash warnings, and a 15-row preview before export.
+- **Teacher Timetable PDF → Excel** (one page per teacher)
+- **Class Timetable PDF → Excel** (one page per class)
 
-## 🛠️ Tech Stack
-- **HTML5 & CSS3** (With light/dark theme support)
-- **JavaScript (ES6+)**
-- **PDF Extraction:** [pdf.js](https://mozilla.github.io/pdf.js/) 3.11.174
-- **Excel Generation:** [ExcelJS](https://github.com/exceljs/exceljs) 4.4.0
-- **Hosted via:** GitHub Pages
+Everything runs in your browser. The PDF is read on your computer and is **not uploaded anywhere**.
 
 ---
 
-## Quick Start
+## Quick start
 
-1. Visit the **[Live Tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/)** or open `index.html` locally in a modern browser (Chrome, Edge, Firefox, Safari).
-2. Pick a tab: **Class Timetable PDF → Excel** or **Teacher Timetable PDF → Excel**.
-3. Drop in the PDF (or click to choose it).
-4. Review the stats, warnings, and 15-row preview, then download the Excel file(s).
+1. Open the [live tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/). It opens on the **Teacher** tab; the **Class** tab is next to it.
+2. **Step 1:** drop in the PDF (or click to choose it).
+3. **Step 2 (teacher list):** nothing to do in most cases. See [Teacher list (CSV)](#teacher-list-csv).
+4. **Step 3:** check the summary, then download the Excel files.
 
-> An internet connection is needed the first time the page loads, because `pdf.js` and `ExcelJS` are loaded via CDN.
+## What you get
 
-## Class Timetable Tab
+| Tab | Button | File saved as | Contents |
+|---|---|---|---|
+| Teacher | Download teacher timetables | `<pdf name>_teacher_timetables.xlsx` | One sheet per teacher (sheet name = teacher code) |
+| Teacher | Download teacher database | `<pdf name>_database.xlsx` | One row per teacher / day / period |
+| Class | Download class timetables | `<pdf name>_class_timetables.xlsx` | One sheet per class, with two tables (see below) |
+| Class | Download class database | `<pdf name>_database.xlsx` | One row per teacher / day / period |
 
-**Input:** The aSc class-timetable PDF (landscape letter, one page per class, 10 day columns A1–B5 × 7 period rows), e.g. `2627_T1_Class_v2.pdf`.
+The page shows the exact file names under the buttons.
 
-**Optional teacher names:** The PDF only contains teacher codes (e.g. `KH`, `CSC`). To fill the *Teacher Name* column, upload a CSV with the headers `Initial,Name,Department`. Use **Download sample CSV** to get an empty template.
+### Timetable workbooks
 
-### Outputs
+Each sheet has days `A1`–`B5` across the top and periods `1`–`7` down the side.
 
-| Button | File | Contents |
-| --- | --- | --- |
-| Download database Excel | database workbook | Sheets: `Timetable`, `Class Lessons`, `Teacher Lookup`, `Notes` |
-| Download class timetables | class timetable workbook | One grid sheet per class (periods down, days across) |
+- **Class timetables:** the table at the top (rows 1–8) shows the subject. A second table in **rows 11–18** has the same structure with more detail. Each cell holds the subject, the teachers and the venue on separate lines, for example `ICT` / `LG / MH` / `207A`. Double periods fill both periods.
+- **Teacher timetables:** each cell holds the subject, the classes and the venue on separate lines. Cell A1 is the teacher code and the full name is in A10. If a teacher has two lessons in the same period, both are shown.
 
-`Timetable` columns: Teacher, Day, Period, Class, Venue, Co-teaching (Y or N), Subject, Time, Teachers sharing this venue, Pairing, Teacher Name.
+### Database workbooks
 
-## Teacher Timetable Tab
+The first columns are:
 
-**Input:** The aSc teacher-timetable PDF (one page per teacher), e.g. `2627_T1_Teacher_v2.pdf`. Teacher names are read directly from the PDF, so no CSV is needed.
+| Teacher | Day | Period | Class | Venue | Co-teaching (Y or N) |
+|---|---|---|---|---|---|
 
-### Outputs
+- The **teacher** database adds **Lesson/Meeting/Support** after Co-teaching.
+- Extra reference columns follow: Subject, Time, Teachers sharing this venue, Pairing, Teacher Name.
+- A double period is two rows (one per period).
+- In the class database, rows that differ only by class are combined, for example `S2H/S2K/S2U`.
+- A `Teacher Lookup` sheet and a `Notes` sheet are included.
 
-| Button | Contents |
-| --- | --- |
-| Download database Excel | Teacher, Day, Period, Class, Venue, Co-teaching, Lesson/Meeting/Support, Subject, Pairing |
-| Download teacher timetables | One timetable sheet per teacher |
+**Lesson / Meeting / Support (teacher database):** a card with classes is a *Lesson*. A card whose name contains "Meeting" is a *Meeting*. A card whose name contains "SUPPORT" is *Support*. For meetings and support the Subject column holds the name printed on the card.
 
-## How Lessons are Interpreted
+---
 
-- **Pairing by position:** If a cell lists several teachers, venues, or subjects, they are matched in order. For example, `AF / HC / SYC` with venues `601,602,603` gives AF–601, HC–602, and SYC–603. The same applies to subjects such as `CH/BIO`.
-- **One value applies to all:** A single subject or single venue applies to every teacher in the cell.
-- **Co-teaching = Y:** Triggered when more than one teacher shares the same venue in the same slot.
-- **Unpaired cells:** If teacher and venue counts differ and there is more than one venue, the full venue list is shown and flagged in the **Pairing** column.
-- **Double periods:** Merged cells (detected from cell layout) are expanded to one row per period.
-- **Identical rows across classes:** (e.g. S2H / S2K / S2U sharing a lesson) are combined into a single row.
-- **Checks:** Warns about overlapping lessons and class-days that don't add up to 7 periods; teacher PDFs also report clash periods.
+## How teachers, venues and subjects are matched
 
-## Notes and Limitations
+Where a lesson lists several teachers, venues and subjects, they are matched **by position**.
 
-- The class parser is tuned to the fixed page layout of the aSc export (column and row positions are hard-coded for the 2026-27 Term 1 PDFs). A differently laid out PDF may need the `X`/`Y` constants adjusted.
-- The core logic is exposed as `window.TT` (also usable under Node via `globalThis`), and the page is scriptable through `window.__tt`.
-- Adding `#teacher` to the URL hash opens the teacher tab directly.
+> `AF / HC / SYC` with venues `601,602,603` means AF uses 601, HC uses 602 and SYC uses 603.
+> Subjects work the same way: `CH/BIO` with `TH / NYC` and `604,213` means TH teaches CH in 604, and NYC teaches BIO in 213.
+
+| Situation | What happens |
+|---|---|
+| Same number of teachers and venues | Matched by position |
+| **One** venue (or subject) | Every teacher shares it |
+| **More teachers than venues** (or subjects), with more than one venue | The first teachers are matched by position. Each remaining teacher gets the full venue list, a **line break**, then the full teacher list (for example `301,302,303,207B,311,308,409` ⏎ `AH / NC / DW / EL / CK / STC / AYI / CT / HH`). Subjects work the same way (`EC/PEDSE` ⏎ `ALC / EL / HH`). These rows are flagged in the **Pairing** column |
+| **Group sessions**: `HD`, `MS`, `CASTLE`, `OPT1`, `OPT2`, `OPT3`… | **Not matched.** Every teacher row shows the full venue list |
+
+The result page lists how many rows have no venue or subject of their own and gives a breakdown by subject.
+
+**Co-teaching** is `Y` when more than one teacher uses the same venue in the same lesson, otherwise `N`. Group sessions are `Y`. For teachers with no venue of their own, the count in "Teachers sharing this venue" is an estimate (at least 2). Meetings and support are `N`.
+
+---
+
+## Teacher list (CSV)
+
+Step 2 on both tabs is one shared list of teacher initials, names and departments, with the columns `Initial,Name,Department`.
+
+- **Reading a Teacher PDF creates the list.** The page reads each teacher's name and department from the page header. The Class tab then uses the list to fill the **Teacher Name** column.
+- **Finding the initials.** The PDF shows the full name but not the initials. The initials are the code that appears in every lesson on that teacher's page. Where several teachers always teach together, codes already taken by other pages are removed. A teacher with no lessons has no code, so they are left out and named in the Step 2 message.
+- **Your own CSV.** You can choose a CSV instead. It stays as the list, and a Teacher PDF never replaces it.
+- **Verification.** Whenever a Teacher PDF is read and a list is already loaded, the PDF is checked against it. The page reports different names or departments, teachers only in the PDF, and teachers only in the list. If a page has no code in the PDF, the code is taken from the list when the name and department match. A list that came from an earlier Teacher PDF is replaced after the check.
+- **Buttons.** With no data the button is **Download sample CSV** (headers only). With data it is **Download teacher list (CSV)**.
+- **File names.** `2627_teacher_names.csv` and `2627_teacher_names_sample.csv`. The `2627` comes from the PDF name when it starts with four digits (for example `2728_…`); otherwise `2627` is used.
+
+---
+
+## Limitations
+
+- Built and tested for the **HKUGA College 2026–27 Term 1** aSc exports (landscape, a 10-day cycle `A1`–`B5`, 7 periods). The page reads the PDF by text position and font size, so a different print layout may need the layout constants in `index.html` adjusted.
+- Free periods have no row.
+- Where a teacher has two lessons in the same period, both are listed.
+- In grouped lessons (for example EN or MA across several classes) the PDF does not say which teacher takes which class, so each teacher is listed against every class in the group.
+- Teacher codes, and the teacher list built from a Teacher PDF, are worked out from the PDF rather than printed in it. Check the Teacher Lookup sheet, or verify against your own CSV.
+- The page needs an internet connection to load two libraries from cdnjs.
+
+## Privacy and hosting
+
+- The PDFs stay in your browser.
+- **No staff names are stored in `index.html`.** Keep any teacher CSV private. A GitHub Pages site is public, so do not commit a CSV containing staff names to a public repository.
+- The repository needs only `index.html`, which is served at `/SchoolTimeTable/`. It uses [pdf.js 3.11.174](https://mozilla.github.io/pdf.js/) and [ExcelJS 4.4.0](https://github.com/exceljs/exceljs) from cdnjs.
+
+## Customising
+
+All settings are at the top of the script in `index.html`:
+
+- `GROUP_RE`: the subject codes treated as group sessions (default `HD`, `MS`, `CASTLE`, `OPT…`).
+- `X`, `Y`: column and row edges of the class timetable grid. `TX` is the column edges for teacher pages.
+- `DAYS`, `TIMES`: day codes and period times.
