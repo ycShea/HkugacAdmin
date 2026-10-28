@@ -33,7 +33,10 @@ The page shows the exact file names under the buttons.
 
 Each sheet has days `A1`–`B5` across the top and periods `1`–`7` down the side.
 
-- **Class timetables:** the table at the top (rows 1–8) shows the subject. A second table in **rows 11–18** has the same structure with more detail. Each cell holds the subject, the teachers and the venue on separate lines, for example `ICT` / `LG / MH` / `207A`. Double periods fill both periods.
+- **Class timetables:** each class sheet has two tables with the same structure.
+  - The **blue table** at the top (rows 1–8) shows the subject.
+  - The **green table** in **rows 11–18** shows more detail. Each cell holds the subject, the teachers and the venue on separate lines, for example `ICT` / `LG / MH` / `207A`.
+  - Double periods fill both periods in both tables.
 - **Teacher timetables:** each cell holds the subject, the classes and the venue on separate lines. Cell A1 is the teacher code and the full name is in A10. If a teacher has two lessons in the same period, both are shown.
 
 ### Database workbooks
@@ -47,7 +50,7 @@ The first columns are:
 - Extra reference columns follow: Subject, Time, Teachers sharing this venue, Pairing, Teacher Name.
 - A double period is two rows (one per period).
 - In the class database, rows that differ only by class are combined, for example `S2H/S2K/S2U`.
-- A `Teacher Lookup` sheet and a `Notes` sheet are included.
+- A `Teacher Lookup` sheet and a `Notes` sheet are included. The class database also has a `Class Lessons` sheet (one row per lesson per class, as printed in the PDF).
 
 **Lesson / Meeting / Support (teacher database):** a card with classes is a *Lesson*. A card whose name contains "Meeting" is a *Meeting*. A card whose name contains "SUPPORT" is *Support*. For meetings and support the Subject column holds the name printed on the card.
 
@@ -75,14 +78,27 @@ The result page lists how many rows have no venue or subject of their own and gi
 
 ## Teacher list (CSV)
 
-Step 2 on both tabs is one shared list of teacher initials, names and departments, with the columns `Initial,Name,Department`.
+Step 2 on both tabs is one shared list of teacher initials, names and departments, with the columns `Initial,Name,Department` (comma-separated).
 
 - **Reading a Teacher PDF creates the list.** The page reads each teacher's name and department from the page header. The Class tab then uses the list to fill the **Teacher Name** column.
 - **Finding the initials.** The PDF shows the full name but not the initials. The initials are the code that appears in every lesson on that teacher's page. Where several teachers always teach together, codes already taken by other pages are removed. A teacher with no lessons has no code, so they are left out and named in the Step 2 message.
-- **Your own CSV.** You can choose a CSV instead. It stays as the list, and a Teacher PDF never replaces it.
-- **Verification.** Whenever a Teacher PDF is read and a list is already loaded, the PDF is checked against it. The page reports different names or departments, teachers only in the PDF, and teachers only in the list. If a page has no code in the PDF, the code is taken from the list when the name and department match. A list that came from an earlier Teacher PDF is replaced after the check.
+- **Your own CSV.** You can choose a CSV instead, and it becomes the list.
+- **Verification.** Whenever a Teacher PDF is read and a list is already loaded, the PDF is checked against it. The result shows how many teacher pages match (and how many teachers the list has), and reports:
+  - different names or departments
+  - teachers only in the PDF
+  - teachers only in the list
+  - pages with no code that could not be found in the list
+  
+  If a page has no code in the PDF, the code is taken from the list when the name and department match.
+- **Replace your CSV? Yes / No.** If the loaded list is a CSV you uploaded, the result asks **"Replace your uploaded CSV with the teacher list from this PDF?"** Until you choose, your CSV stays as the list.
+  - **Yes, replace it:** the list is replaced with the one from the PDF, on both tabs.
+  - **No, keep my CSV:** your CSV stays as the list.
+  - If the list came from an earlier Teacher PDF (not a CSV you uploaded), it is replaced automatically after the check.
+  - Uploading another CSV while the question is open withdraws the question.
 - **Buttons.** With no data the button is **Download sample CSV** (headers only). With data it is **Download teacher list (CSV)**.
 - **File names.** `2627_teacher_names.csv` and `2627_teacher_names_sample.csv`. The `2627` comes from the PDF name when it starts with four digits (for example `2728_…`); otherwise `2627` is used.
+
+**If very few teachers match:** the check line says how many teachers the list has. A low number usually means the CSV is partial, comes from another term, or has different initials. Check that it has the headers `Initial,Name,Department` and is saved as comma-separated text, or answer **Yes** to replace it with the list from the PDF.
 
 ---
 
@@ -90,7 +106,7 @@ Step 2 on both tabs is one shared list of teacher initials, names and department
 
 - Built and tested for the **HKUGA College 2026–27 Term 1** aSc exports (landscape, a 10-day cycle `A1`–`B5`, 7 periods). The page reads the PDF by text position and font size, so a different print layout may need the layout constants in `index.html` adjusted.
 - Free periods have no row.
-- Where a teacher has two lessons in the same period, both are listed.
+- Where a teacher has two lessons in the same period, both are listed. A lesson drawn side by side in a clash cell does not print its teacher list, so the page takes it from the same lesson on another teacher's page. If that is not possible, the venue is not matched and the row is flagged in the Pairing column.
 - In grouped lessons (for example EN or MA across several classes) the PDF does not say which teacher takes which class, so each teacher is listed against every class in the group.
 - Teacher codes, and the teacher list built from a Teacher PDF, are worked out from the PDF rather than printed in it. Check the Teacher Lookup sheet, or verify against your own CSV.
 - The page needs an internet connection to load two libraries from cdnjs.
