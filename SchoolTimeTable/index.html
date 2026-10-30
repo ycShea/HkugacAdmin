@@ -41,6 +41,14 @@
   ul.w { margin:6px 0 0 18px; padding:0; font-size:.88rem; }
   table.mini { width:auto; min-width:220px; margin:0 0 10px; }
   table.mini td:last-child, table.mini th:last-child { text-align:right; }
+  .row-end { display:flex; justify-content:flex-end; margin:6px 0 2px; }
+  .add-free { border:1px dashed var(--line); background:transparent; color:var(--accent); border-radius:8px; padding:8px 16px; font:inherit; font-weight:600; font-size:.92rem; cursor:pointer; white-space:nowrap; }
+  .add-free:hover { background:var(--drop); border-color:var(--accent); }
+  .confirm { border:1px solid var(--err); border-radius:10px; padding:10px 14px; margin:0 0 10px; }
+  .chk { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--line); border-radius:8px; cursor:pointer; background:var(--drop); font-weight:600; }
+  .chk input { width:16px; height:16px; accent-color:var(--accent); }
+  select { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--text); }
+  .mapblock { margin:10px 0 6px; }
   [hidden] { display:none !important; }
 </style>
 </head>
@@ -48,6 +56,7 @@
 <nav class="tabs" role="tablist" aria-label="Timetable type">
   <button class="tab" role="tab" id="tab-teacher" aria-selected="true" aria-controls="panel-teacher" data-tab="teacher">Teacher Timetable PDF → Excel</button>
   <button class="tab" role="tab" id="tab-class" aria-selected="false" aria-controls="panel-class" data-tab="class" tabindex="-1">Class Timetable PDF → Excel</button>
+  <button class="tab" role="tab" id="tab-free" aria-selected="false" aria-controls="panel-free" data-tab="free" tabindex="-1" hidden>Free lesson attendance</button>
 </nav>
 <main>
 
@@ -129,9 +138,49 @@
       <button class="btn" id="c-dl" disabled>Download class database</button>
       <span class="muted" id="c-dlInfo"></span>
     </div>
+    <div class="row-end"><button type="button" class="add-free" id="tab-add" title="Create the Free lesson attendance tab from this Class PDF" hidden>＋ Free lesson attendance</button></div>
     <p class="muted" id="c-files" style="margin:0 0 6px"></p>
     <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
     <div class="scroll"><table id="c-prev"></table></div>
+  </div>
+</section>
+
+
+<!-- ===================== FREE LESSON ATTENDANCE TAB ===================== -->
+<section id="panel-free" role="tabpanel" aria-labelledby="tab-free" hidden>
+  <h1>Free lesson attendance</h1>
+  <p class="sub">Built from the Class PDF you read. One row per class, day and period (<code>Subject | Day | Period</code>), where Subject is the class and the subject, for example <code>S4A-MA</code>. For S4–S6 the electives are shown as E1, E2 or E3. Everything runs in your browser.</p>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <h2 style="margin:0">1. Levels</h2>
+      <button type="button" class="btn sec" id="f-all">Select all</button>
+      <button type="button" class="btn sec" id="f-none">Unselect all</button>
+    </div>
+    <div class="row" id="f-levels"></div>
+    <p class="muted" style="margin:10px 0 0">S4–S6 are ticked by default. S1–S3 subjects are shown as printed (for example <code>S1H-ICT</code>).</p>
+  </div>
+
+  <div class="card" id="f-mapcard" hidden>
+    <h2>2. Map the electives</h2>
+    <p class="muted" style="margin-top:0">These classes have no E1/E2/E3 block lessons, so the number cannot be worked out from the timetable. Choose the number for each subject. The defaults are PHY and EC/PHY → E1, CHEM → E2, BIO → E3. A class that has two blocks gets the missing number automatically.</p>
+    <div id="f-maps"></div>
+  </div>
+
+  <div class="card">
+    <h2 id="f-resultTitle">2. Result</h2>
+    <div class="stats" id="f-stats"></div>
+    <div id="f-warns"></div>
+    <div class="row" style="margin:12px 0">
+      <button class="btn" id="f-dl">Download free lesson attendance</button>
+    </div>
+    <div class="confirm" id="f-confirm" hidden>
+      <p style="margin:0 0 8px"><b id="f-confirmText"></b></p>
+      <div class="row"><button type="button" class="btn" id="f-yes">Yes, download anyway</button><button type="button" class="btn sec" id="f-no">No, go back</button></div>
+    </div>
+    <p class="muted" id="f-files" style="margin:0 0 6px"></p>
+    <h2 style="margin-top:16px">Preview (first 10 rows)</h2>
+    <div class="scroll"><table id="f-prev"></table></div>
   </div>
 </section>
 
@@ -593,6 +642,107 @@
     return wb;
   }
 
+  // ================= Free lesson attendance (built from the class PDF) =================
+  // Subject = Class + "-" + code, e.g. S4A-MA. For S4-S6 the electives are shown as E1 / E2 / E3:
+  //  - a block lesson (S4E2, S5E1 ...) keeps its own number;
+  //  - a class with blocks and ONE other elective gets the missing number;
+  //  - otherwise (no blocks, e.g. S5C and S6A) the number comes from a mapping chosen by the user.
+  // Subjects CHI, EN, MA, CSD, HD, PE (and OPT1, OPT2, CASTLE, MS) stay as printed. S1-S3 stay as printed.
+  const FREE_CORE = /^(CHI|EN|MA|CSD|HD|PE|CASTLE|MS|OPT\d*)$/i;
+  const FREE_BLOCK = /^S[4-6]E([123])$/i;
+  function levelOf(cls) { const m = /^S([1-6])/.exec(cls || ''); return m ? +m[1] : 0; }
+
+  function freeAnalyse(lessons) {
+    const byClass = {};
+    lessons.forEach(L => {
+      const lv = levelOf(L.cls); if (lv < 4) return;
+      const c = byClass[L.cls] || (byClass[L.cls] = { level: lv, blocks: new Set(), codes: new Set() });
+      const s = String(L.subject).trim();
+      if (FREE_CORE.test(s)) return;
+      const m = FREE_BLOCK.exec(s);
+      if (m) c.blocks.add(+m[1]); else c.codes.add(s);
+    });
+    const mapLevels = {};
+    Object.keys(byClass).forEach(cls => {
+      const c = byClass[cls];
+      const missing = [1, 2, 3].filter(n => !c.blocks.has(n));
+      c.auto = null; c.needsMap = false;
+      if (c.codes.size) {
+        if (c.blocks.size > 0 && c.codes.size === 1 && missing.length === 1) c.auto = 'E' + missing[0];
+        else c.needsMap = true;
+      }
+      if (c.needsMap) {
+        const m = mapLevels[c.level] || (mapLevels[c.level] = { classes: [], codes: [] });
+        m.classes.push(cls); c.codes.forEach(code => { if (m.codes.indexOf(code) < 0) m.codes.push(code); });
+      }
+    });
+    Object.keys(mapLevels).forEach(k => { mapLevels[k].classes.sort(); mapLevels[k].codes.sort(); });
+    return { byClass: byClass, mapLevels: mapLevels };
+  }
+
+  // default mapping offered to the user: PHY or EC/PHY -> E1, CHEM -> E2, BIO -> E3
+  function freeDefaultE(code) {
+    const k = String(code).replace(/\s+/g, '').toUpperCase();
+    if (k === 'PHY' || k === 'EC/PHY' || k === 'ECPHY') return 'E1';
+    if (k === 'CHEM') return 'E2';
+    if (k === 'BIO') return 'E3';
+    return '';
+  }
+
+  // levels: array of level numbers (1-6); maps: { level: { code: 'E1' | 'E2' | 'E3' | '' } }
+  function freeRows(lessons, levels, maps) {
+    const an = freeAnalyse(lessons);
+    const want = {}; levels.forEach(l => { want[l] = true; });
+    const rows = [], unmapped = {}, usedBy = {};
+    lessons.forEach(L => {
+      const lv = levelOf(L.cls); if (!want[lv]) return;
+      const s = String(L.subject).trim();
+      let code = s;
+      if (lv >= 4 && !FREE_CORE.test(s)) {
+        const m = FREE_BLOCK.exec(s);
+        if (m) code = 'E' + m[1];
+        else {
+          const c = an.byClass[L.cls];
+          if (c && c.auto) code = c.auto;
+          else {
+            const v = maps && maps[lv] && maps[lv][s];
+            if (v) { code = v; (usedBy[L.cls] = usedBy[L.cls] || {})[s] = v; }
+            else unmapped[L.cls + ': ' + s] = true;
+          }
+        }
+      }
+      for (let p = L.period; p < L.period + L.span; p++) rows.push({ cls: L.cls, subject: L.cls + '-' + code, day: L.day, period: p });
+    });
+    const dord = {}; DAYS.forEach((d, i) => { dord[d] = i; });
+    rows.sort((a, b) => (dord[a.day] - dord[b.day]) || (a.period - b.period) || (a.cls < b.cls ? -1 : a.cls > b.cls ? 1 : 0));
+    const notes = [];
+    Object.keys(unmapped).sort().forEach(k => notes.push(k + ' is not mapped, so it is shown as printed.'));
+    Object.keys(usedBy).sort().forEach(cls => {
+      const byE = {}; Object.keys(usedBy[cls]).forEach(code => { (byE[usedBy[cls][code]] = byE[usedBy[cls][code]] || []).push(code); });
+      Object.keys(byE).forEach(e => { if (byE[e].length > 1) notes.push(cls + ': ' + byE[e].join(' and ') + ' are both mapped to ' + e + '.'); });
+    });
+    return { rows: rows, notes: notes, analysis: an };
+  }
+
+  async function buildFreeWorkbook(ExcelJS, rows) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Timetable PDF to Excel';
+    const FONT = { name: 'Arial', size: 10 };
+    const HF = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    const fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3864' } };
+    const ws = wb.addWorksheet('Free lesson attendance', { views: [{ state: 'frozen', ySplit: 1 }] });
+    ws.columns = [{ header: 'Subject', width: 22 }, { header: 'Day', width: 8 }, { header: 'Period', width: 9 }];
+    ws.getRow(1).height = 24;
+    ws.getRow(1).eachCell(cell => { cell.font = HF; cell.fill = fill; cell.alignment = { horizontal: 'center', vertical: 'middle' }; });
+    rows.forEach((r, i) => {
+      const row = ws.getRow(i + 2);
+      row.getCell(1).value = r.subject; row.getCell(2).value = r.day; row.getCell(3).value = r.period;
+      for (let k = 1; k <= 3; k++) { row.getCell(k).font = FONT; if (k > 1) row.getCell(k).alignment = { horizontal: 'center' }; }
+    });
+    ws.autoFilter = { from: 'A1', to: 'C' + (rows.length + 1) };
+    return wb;
+  }
+
   // ================= Teacher timetable PDF =================
 const TX=[63,134,206,278,349,421,493,565,636,708,780];
 const reTL=/^[A-Z]{1,4}(?: \/ [A-Z]{1,4})*(?: \/)?$/;          // teacher list item
@@ -977,7 +1127,7 @@ function finalizeTeacherCards(pagesResult){
   }
 
   root.TT = { readPdf, parsePage, pairLesson, expandRows, validate, parseCsv, buildWorkbook, buildClassWorkbook,
-    parseTeacherPage, finalizeTeacherCards, teacherRows, validateTeacher, buildTeacherCsv, namesToCsv, namesFromPages, verifyTeacherList, buildTeacherDbWorkbook, buildTeacherTimetableWorkbook, DAYS, TIMES };
+    parseTeacherPage, finalizeTeacherCards, teacherRows, validateTeacher, buildTeacherCsv, namesToCsv, namesFromPages, verifyTeacherList, buildTeacherDbWorkbook, buildTeacherTimetableWorkbook, freeAnalyse, freeRows, freeDefaultE, buildFreeWorkbook, DAYS, TIMES };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -1058,6 +1208,7 @@ function finalizeTeacherCards(pagesResult){
       if (!file) return;
       if (!window.pdfjsLib || !window.ExcelJS) { setStatus('The PDF and Excel libraries could not be loaded. Check your internet connection and reload.', 'err'); return; }
       state.fileName = file.name; state.ready = false;
+      if (cfg.onStart) cfg.onStart();
       var m = /^(\d{4})/.exec(file.name); prefix = m ? m[1] : '2627';
       el('result').hidden = true; el('dl').disabled = true; el('dl2').disabled = true;
       var prog = el('prog'); prog.hidden = false; prog.value = 0;
@@ -1076,6 +1227,7 @@ function finalizeTeacherCards(pagesResult){
         var base = file.name.replace(/\.pdf$/i, '') || 'timetable';
         el('files').textContent = 'Files: ' + base + cfg.btn2.suffix + '  |  ' + base + cfg.btn1.suffix;
         setStatus('Done. ' + r.total.toLocaleString() + ' rows ready.', 'ok');
+        if (cfg.onDone) cfg.onDone();
       } catch (e) {
         console.error(e); setStatus('Could not read this PDF: ' + (e && e.message ? e.message : e), 'err');
       }
@@ -1222,8 +1374,126 @@ function finalizeTeacherCards(pagesResult){
         rows: recs.slice(0, 10).map(function (r) { return [r.teacher, r.day, r.period, r.cls, r.venue, r.sharing > 1 ? 'Y' : 'N', r.subject, r.status]; })
       };
     },
+    onStart: function () { resetFree(); },
+    onDone: function () { $('tab-add').hidden = false; },
     btn1: { suffix: '_database.xlsx', build: function (st) { return TT.buildWorkbook(ExcelJS, cls.lessons, cls.recs, TL.names, { fileName: st.fileName }); } },
     btn2: { suffix: '_class_timetables.xlsx', build: function () { return TT.buildClassWorkbook(ExcelJS, cls.lessons); } }
+  });
+
+  // ====================== FREE LESSON ATTENDANCE TAB ======================
+  var free = null;   // { levels: {1..6: bool}, maps: {level: {code: 'E1'|'E2'|'E3'|''}}, analysis, result }
+  var FREE_LEVELS = [1, 2, 3, 4, 5, 6];
+  function resetFree() {
+    free = null;
+    $('tab-add').hidden = true; $('tab-free').hidden = true;
+    var wasActive = $('tab-free').getAttribute('aria-selected') === 'true';
+    $('panel-free').hidden = true;
+    if (wasActive) showTab('class');
+  }
+  function openFree() {
+    if (!cls.lessons) return;
+    var an = TT.freeAnalyse(cls.lessons), maps = {};
+    Object.keys(an.mapLevels).forEach(function (lv) {
+      maps[lv] = {}; an.mapLevels[lv].codes.forEach(function (code) { maps[lv][code] = TT.freeDefaultE(code); });
+    });
+    free = { levels: { 1: false, 2: false, 3: false, 4: true, 5: true, 6: true }, maps: maps, analysis: an, result: null };
+    $('f-levels').innerHTML = FREE_LEVELS.map(function (l) {
+      return '<label class="chk"><input type="checkbox" data-level="' + l + '"' + (free.levels[l] ? ' checked' : '') + '> S' + l + '</label>';
+    }).join('');
+    $('tab-add').hidden = true; $('tab-free').hidden = false;
+    renderFree();
+    showTab('free');
+  }
+  // order of the mapping rows: by the default elective number (E1, E2, E3, then the rest), then by name
+  function sortedCodes(codes) {
+    var rank = function (c) { var e = TT.freeDefaultE(c); return e ? +e.charAt(1) : 4; };
+    return codes.slice().sort(function (a, b) { return (rank(a) - rank(b)) || (a < b ? -1 : a > b ? 1 : 0); });
+  }
+  function selectedLevels() { return FREE_LEVELS.filter(function (l) { return free.levels[l]; }); }
+
+  function renderFree() { renderMaps(); renderResult(); }
+  // mapping tables: only for ticked levels that have a class needing a mapping (redrawn only when the ticks change,
+  // so a dropdown keeps keyboard focus while it is being used)
+  function renderMaps() {
+    if (!free) return;
+    var html = '', need = Object.keys(free.analysis.mapLevels).filter(function (lv) { return free.levels[lv]; });
+    need.forEach(function (lv) {
+      var m = free.analysis.mapLevels[lv];
+      html += '<div class="mapblock"><p style="margin:8px 0 4px"><b>S' + lv + '</b> <span class="muted">applies to ' + esc(m.classes.join(', ')) + '</span></p>' +
+        '<table class="mini"><tr><th>Subject</th><th>Elective</th></tr>' +
+        sortedCodes(m.codes).map(function (code) {
+          var cur = (free.maps[lv] || {})[code] || '';
+          return '<tr><td>' + esc(code) + '</td><td><select data-level="' + lv + '" data-code="' + esc(code) + '">' +
+            ['E1', 'E2', 'E3', ''].map(function (v) { return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + (v || 'As printed') + '</option>'; }).join('') +
+            '</select></td></tr>';
+        }).join('') + '</table></div>';
+    });
+    $('f-maps').innerHTML = html; $('f-mapcard').hidden = !need.length;
+    $('f-resultTitle').textContent = (need.length ? '3' : '2') + '. Result';
+  }
+  function renderResult() {
+    if (!free) return;
+    hideConfirm();
+    var levels = selectedLevels();
+    var r = TT.freeRows(cls.lessons, levels, free.maps);
+    free.result = r;
+    var classes = {}; r.rows.forEach(function (x) { classes[x.cls] = true; });
+    var eRows = r.rows.filter(function (x) { return /-E[123]$/.test(x.subject); }).length;
+    $('f-stats').innerHTML = [['Rows', r.rows.length], ['Classes', Object.keys(classes).length], ['Levels ticked', levels.length], ['Elective rows (E1–E3)', eRows]]
+      .map(function (s) { return '<div class="stat"><b>' + Number(s[1]).toLocaleString() + '</b>' + s[0] + '</div>'; }).join('');
+    var w = '';
+    if (!levels.length) w += '<p class="warn">Tick at least one level.</p>';
+    if (r.notes.length) w += '<ul class="w">' + r.notes.map(esc).map(function (n) { return '<li class="err">' + n + '</li>'; }).join('') + '</ul>';
+    $('f-warns').innerHTML = w;
+    $('f-prev').innerHTML = '<tr><th>Subject</th><th>Day</th><th>Period</th></tr>' +
+      r.rows.slice(0, 10).map(function (x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + x.day + '</td><td>' + x.period + '</td></tr>'; }).join('');
+    var base = (classPanel.state.fileName || '').replace(/\.pdf$/i, '') || 'timetable';
+    $('f-files').textContent = 'File: ' + base + '_free_lesson_attendance.xlsx';
+    $('f-dl').disabled = !r.rows.length;
+  }
+  function hideConfirm() { $('f-confirm').hidden = true; }
+  // clicking Download with warnings asks first; Yes continues, No goes back
+  function downloadFree() {
+    if (!free || !free.result || !free.result.rows.length) return Promise.resolve();
+    var n = free.result.notes.length;
+    if (n) {
+      $('f-confirmText').textContent = 'There ' + (n === 1 ? 'is 1 warning' : 'are ' + n + ' warnings') + ' above. Download anyway?';
+      $('f-confirm').hidden = false;
+      return Promise.resolve();
+    }
+    return doDownloadFree();
+  }
+  async function doDownloadFree() {
+    hideConfirm();
+    if (!free || !free.result || !free.result.rows.length) return;
+    var btn = $('f-dl'), old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
+    try {
+      var wb = await TT.buildFreeWorkbook(ExcelJS, free.result.rows);
+      var buf = await wb.xlsx.writeBuffer();
+      var base = (classPanel.state.fileName || '').replace(/\.pdf$/i, '') || 'timetable';
+      saveBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), base + '_free_lesson_attendance.xlsx');
+    } catch (e) { console.error(e); $('f-warns').innerHTML = '<p class="err">Could not build the Excel file: ' + esc(e.message) + '</p>'; }
+    btn.textContent = old; btn.disabled = false;
+  }
+  $('tab-add').addEventListener('click', openFree);
+  $('f-dl').addEventListener('click', downloadFree);
+  $('f-yes').addEventListener('click', doDownloadFree);
+  $('f-no').addEventListener('click', hideConfirm);
+  function setAllLevels(on) {
+    if (!free) return;
+    FREE_LEVELS.forEach(function (l) { free.levels[l] = on; });
+    Array.prototype.forEach.call(document.querySelectorAll('#f-levels input'), function (i) { i.checked = on; });
+    renderFree();
+  }
+  $('f-all').addEventListener('click', function () { setAllLevels(true); });
+  $('f-none').addEventListener('click', function () { setAllLevels(false); });
+  $('f-levels').addEventListener('change', function (e) {
+    var lv = e.target && e.target.getAttribute && e.target.getAttribute('data-level');
+    if (!lv || !free) return; free.levels[lv] = !!e.target.checked; renderFree();
+  });
+  $('f-maps').addEventListener('change', function (e) {
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || !free) return;
+    free.maps[t.getAttribute('data-level')][t.getAttribute('data-code')] = t.value; renderResult();
   });
 
   // ====================== TABS ======================
@@ -1240,7 +1510,10 @@ function finalizeTeacherCards(pagesResult){
   tabs.forEach(function (t, i) {
     t.addEventListener('click', function () { showTab(t.getAttribute('data-tab')); });
     t.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; showTab(n.getAttribute('data-tab'), true); e.preventDefault(); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        var vis = tabs.filter(function (x) { return !x.hidden; }), at = vis.indexOf(t);
+        var n = vis[(at + (e.key === 'ArrowRight' ? 1 : vis.length - 1)) % vis.length]; showTab(n.getAttribute('data-tab'), true); e.preventDefault();
+      }
     });
   });
   if (location.hash === '#class') showTab('class');
@@ -1250,6 +1523,7 @@ function finalizeTeacherCards(pagesResult){
     showTab: showTab,
     list: { upload: handleNames, download: downloadList, get: function () { return TL; }, prefix: function () { return prefix; }, pending: function () { return pendingTL; } },
     cls: { handlePdf: classPanel.handlePdf, download: classPanel.downloadDb, downloadClasses: classPanel.downloadSecond, state: cls },
+    free: { open: openFree, reset: resetFree, state: function () { return free; }, download: downloadFree, confirmed: doDownloadFree },
     teacher: { handlePdf: teacherPanel.handlePdf, download: teacherPanel.downloadDb, downloadTeachers: teacherPanel.downloadSecond, state: tch }
   };
 })();
