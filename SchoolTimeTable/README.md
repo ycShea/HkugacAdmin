@@ -127,7 +127,7 @@ A third tab, built from the **Class PDF**. It gives one row per class, day and p
 | S6A-E2 | A1 | 1 |
 | S4A-EN | A1 | 2 |
 
-**How to open it.** After a Class PDF is read, a **＋ Free lesson attendance** button appears in step 3 of the Class tab, on the right, one line below **Download class timetables** and **Download class database**. Click it to create the tab. If you read another Class PDF, the tab disappears and the button comes back; click it again to create the tab from the new PDF.
+**How to open it.** After a Class PDF is read, a **＋ Free lesson attendance** button appears in step 3 of the Class tab, on the right, one line below **Download class timetables** and **Download class database**. Click it to create the tab; the page scrolls to the top of the new tab. If you read another Class PDF, the tab disappears and the button comes back; click it again to create the tab from the new PDF.
 
 **Steps in the tab**
 

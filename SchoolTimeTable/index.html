@@ -1403,6 +1403,13 @@ function finalizeTeacherCards(pagesResult){
     $('tab-add').hidden = true; $('tab-free').hidden = false;
     renderFree();
     showTab('free');
+    scrollToTop();
+  }
+  // after the button (at the bottom of step 3) is clicked, show the new tab from its top
+  function scrollToTop() {
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { window.scrollTo({ top: 0, left: 0, behavior: calm ? 'auto' : 'smooth' }); }
+    catch (e) { try { window.scrollTo(0, 0); } catch (e2) { /* ignore */ } }
   }
   // order of the mapping rows: by the default elective number (E1, E2, E3, then the rest), then by name
   function sortedCodes(codes) {
