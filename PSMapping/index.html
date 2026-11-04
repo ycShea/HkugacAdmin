@@ -1,1 +1,134 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PS Name Unifier</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{color-scheme:light dark;--bg:#fafafa;--fg:#1d1d1f;--card:#fff;--bd:#d0d0d5;--ac:#2563eb;--ok:#d9f2df;--warn:#fff1c2;--bad:#fcd9d9}
+@media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#f0f0f2;--card:#26262b;--bd:#46464e;--ac:#6ea0ff;--ok:#1f4a2c;--warn:#524512;--bad:#5a2323}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,"Noto Sans TC",sans-serif}
+h1{font-size:20px;margin:0 0 4px}.sub{opacity:.7;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+button,select,input[type=text]{font:inherit;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
+button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:980px}
+th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}th{position:sticky;top:0;background:var(--card)}
+td input[type=text]{width:100%;box-sizing:border-box}
+.chip{font-size:12px;padding:2px 6px;margin:3px 3px 0 0;border-radius:12px}
+.st{padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
+.auto,.confirmed{background:var(--ok)}.review{background:var(--warn)}.none{background:var(--bad)}
+#msg{margin-top:8px;color:#c2410c}
+</style></head><body>
+<h1>PS Name Unifier</h1>
+<div class="sub">Everything runs in your browser. Your files are never uploaded anywhere.</div>
+<div class="card"><div class="row">
+<label>1. Mapping workbook (needs sheets <b>AllHashTable</b> and <b>香港小學名單</b>)<br><input type="file" id="fm" accept=".xlsx,.xls"></label>
+<label>2. Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label>
+<button class="p" id="go">Start matching</button></div><div id="msg"></div></div>
+<div id="app" hidden>
+<div class="card row"><span id="stats"></span>
+<label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
+<button id="dl1" class="p">Download results (.xlsx)</button><button id="dl2">Download updated mapping (.xlsx)</button></div>
+<div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th title="International school">Intl</th><th title="Mainland school">Mainland</th><th title="Overseas school">Overseas</th></tr></thead><tbody id="tb"></tbody></table></div>
+</div>
+<datalist id="dl"></datalist>
+<script>
+const $=id=>document.getElementById(id);
+const PAIRS="圣聖 诺諾 学學 黄黃 会會 属屬 级級 协協 灵靈 爱愛 东東 华華 园園 师師 纪紀 广廣 兰蘭 济濟 厅廳 义義 劳勞 龙龍 门門 马馬 湾灣 区區 业業 务務 书書 进進 听聽 实實 础礎 视視 觉覺 红紅 钟鐘 观觀 乐樂 远遠 伦倫 维維 兴興 陆陸 礼禮 启啟 时時 诚誠 乡鄉 团團 长長 丽麗 卫衛 圆圓 强強 胜勝 经經 术術 顺順 荣榮 汉漢 宝寶 养養 农農 谊誼 沪滬 苏蘇 联聯 国國 内內 关關 开開 将將 军軍 鸭鴨 岛島 营營 艺藝 讲講 乔喬 杨楊 邝鄺 陈陳 郑鄭 罗羅 刘劉 吕呂 叶葉 际際 贤賢 钜鉅 浙浙 澳澳".split(" ");
+const S2T={};PAIRS.forEach(p=>S2T[p[0]]=p[1]);
+const t2=s=>[...s].map(c=>S2T[c]||c).join("");
+function norm(t){
+  t=t2(String(t).normalize("NFKC").toLowerCase()).replace(/[’‘`]/g,"'");
+  t=t.replace(/\btko\b/g,"tseung kwan o").replace(/\bhk\b/g,"hong kong").replace(/\bgov(?:t|'t)?\b/g,"government");
+  t=t.replace(/[^\p{L}\p{N}]+/gu," ").trim();
+  t=t.split(" ").map(w=>{ if(/^[a-z]{5,9}$/.test(w)){ if(lev(w,"school")<=1)return"school"; if(lev(w,"primary")<=1)return"primary"; } return w; }).join(" ");
+  t=t.replace(/\b(primary|school|ps|the)\b/g," ").replace(/小學|學校/g," ");
+  return t.replace(/\s+/g," ").trim();
+}
+const sq=t=>norm(t).replace(/ /g,"");
+const ek=t=>String(t).normalize("NFKC").trim().toLowerCase();
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+const sim=(a,b)=>1-lev(a,b)/Math.max(a.length,b.length);
+function one(q,c){if(!c)return 0;let r=sim(q,c);const mn=Math.min(q.length,c.length),mx=Math.max(q.length,c.length);
+  if(mn>=3&&mn/mx>=.6&&(c.includes(q)||q.includes(c)))r=Math.max(r,.88*Math.min(1,Math.pow(mn/mx,.3))+.08);return r}
+const RI=/international|國際|esf|academy|harrow|wycombe|kellett|dalton|basis|american|british|japanese|korean|french|german|canadian|spanish/i;
+const RM=/shenzhen|guangzhou|zhuhai|zhu hai|dongguan|huizhou|zhongshan|foshan|jiangmen|深圳|廣州|珠海|東莞|惠州|中山|佛山|江門|內地|mainland/i;
+const RO=/canada|vancouver|toronto|\buk\b|england|london|australia|sydney|melbourne|new zealand|auckland|singapore|taiwan|\busa\b|california|new york|加拿大|英國|澳洲|美國|新西蘭|新加坡|台灣|臺灣|溫哥華|多倫多/i;
 
+let HE,HN,AB,DM,CANON,IDX,RAWS,ROWS,NEW,HASH,SCH,NOTE;
+function guess(r){const s=t2(r.input+" "+(r.u||"")),d=DM.get(r.u)||"";
+  return{i:RI.test(s)||d==="國際學校",m:RM.test(s)||d==="國內學校",o:RO.test(s)}}
+function suggest(inp){const q=sq(inp);if(!q)return[];
+  const res=IDX.map(x=>({n:x.c,s:Math.max(one(q,x.zh),one(q,x.en),one(q,x.full))}));
+  res.sort((a,b)=>b.s-a.s);return res.slice(0,3)}
+function match(inp){const k=ek(inp);
+  if(HE.has(k))return{u:HE.get(k),st:"auto",sg:[]};
+  const h=HN.get(sq(inp));if(h&&h.size===1)return{u:[...h][0],st:"auto",sg:[]};
+  let sg=suggest(inp);const ab=AB.get(k);
+  if(ab&&ab.size===1){const n=[...ab][0];sg=[{n,s:.95},...sg.filter(x=>x.n!==n)].slice(0,3)}
+  return{u:sg.length&&sg[0].s>=.75?sg[0].n:"",st:"review",sg}}
+
+$("go").onclick=async()=>{
+  const msg=$("msg");msg.textContent="";
+  if(!$("fm").files[0]||!$("fl").files[0]){msg.textContent="Please choose both files.";return}
+  try{
+    const wm=XLSX.read(await $("fm").files[0].arrayBuffer());
+    const a=wm.Sheets["AllHashTable"],s=wm.Sheets["香港小學名單"];
+    if(!a||!s){msg.textContent="Sheets AllHashTable and 香港小學名單 were not found in the mapping workbook.";return}
+    const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+    HASH=aoa(a);SCH=aoa(s);
+    HE=new Map();HN=new Map();AB=new Map();DM=new Map();
+    HASH.slice(1).forEach(([i,u])=>{if(!i||!u)return;HE.set(ek(i),u);const k=sq(i);if(!HN.has(k))HN.set(k,new Set());HN.get(k).add(u)});
+    const cs=new Set();
+    SCH.slice(1).forEach(([n,ab,d])=>{if(!n)return;cs.add(n);DM.set(n,d||"");
+      if(ab){const k=ek(ab);if(!AB.has(k))AB.set(k,new Set());AB.get(k).add(n)}});
+    HASH.slice(1).forEach(([,u])=>{if(u)cs.add(u)});
+    CANON=[...cs];
+    IDX=CANON.map(c=>({c,zh:sq((c.match(/[\u4e00-\u9fff（）()]+/g)||[]).join("")),en:sq(c.replace(/[\u4e00-\u9fff（）]+/g," ")),full:sq(c)}));
+    $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("");
+    const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
+    RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim());
+    const cnt=new Map();RAWS.forEach(r=>{if(r)cnt.set(ek(r),{input:r,n:(cnt.get(ek(r))?.n||0)+1})});
+    ROWS=[];NEW=[];const items=[...cnt.values()];
+    for(let i=0;i<items.length;i++){
+      const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
+      if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
+    ROWS.sort((x,y)=>(x.st==="auto")-(y.st==="auto"));
+    msg.textContent="";$("app").hidden=false;render();
+  }catch(e){msg.textContent="Error: "+e.message}
+};
+const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+function render(){
+  const f=$("flt").value,c={auto:0,confirmed:0,review:0};ROWS.forEach(r=>c[r.st]++);
+  $("stats").textContent=`${ROWS.length} unique names: ${c.auto} auto (100%), ${c.confirmed} confirmed by you, ${c.review} need review`;
+  $("tb").innerHTML=ROWS.map((r,i)=>({r,i})).filter(({r})=>f==="all"||(f==="todo")===(r.st==="review")).map(({r,i})=>{
+    const done=r.st!=="review",lab={auto:"Auto 100%",confirmed:"Confirmed",review:"Review"}[r.st];
+    const nm=r.st==="auto"?esc(r.u):`<input type="text" list="dl" data-i="${i}" data-k="u" value="${esc(r.draft??r.u)}" ${done?"disabled":""}>`+
+      (done?"":r.sg.map(x=>`<button class="chip" data-i="${i}" data-k="chip" data-n="${esc(x.n)}">${esc(x.n)} (${Math.round(x.s*100)}%)</button>`).join(""));
+    const act=r.st==="auto"?"":r.st==="confirmed"?`<button data-i="${i}" data-k="undo">Undo</button>`:`<button class="p" data-i="${i}" data-k="ok">✔ Confirm</button> `;
+    const g=`<a href="https://www.google.com/search?q=${encodeURIComponent(r.input+" 小學 Hong Kong primary school")}" target="_blank" rel="noopener"><button type="button">🔍 Google</button></a>`;
+    const cb=k=>`<td><input type="checkbox" data-i="${i}" data-k="f${k}" ${r.f[k]?"checked":""}></td>`;
+    return`<tr><td>${i+1}</td><td>${esc(r.input)} (${r.n})</td><td><span class="st ${r.st}">${lab}</span></td><td>${nm}</td><td>${act}${r.st==="auto"?"":g}</td>${cb("i")}${cb("m")}${cb("o")}</tr>`}).join("");
+}
+$("flt").onchange=render;
+$("tb").addEventListener("input",e=>{const t=e.target;if(t.dataset.k==="u")ROWS[t.dataset.i].draft=t.value});
+$("tb").addEventListener("click",e=>{const t=e.target.closest("button[data-k]");if(!t)return;const r=ROWS[t.dataset.i],k=t.dataset.k;
+  if(k==="chip"){r.draft=t.dataset.n;if(!r.touched)r.f=guess({input:r.input,u:r.draft});render()}
+  else if(k==="ok"){const v=(r.draft??r.u).trim();if(!v){alert("Please choose or type a standard name first.");return}
+    r.u=v;r.st="confirmed";if(!HE.has(ek(r.input))&&!NEW.some(x=>ek(x[0])===ek(r.input)))NEW.push([r.input,v]);
+    if(!r.touched)r.f=guess(r);render()}
+  else if(k==="undo"){r.st="review";NEW=NEW.filter(x=>ek(x[0])!==ek(r.input));render()}});
+$("tb").addEventListener("change",e=>{const t=e.target;if(t.type==="checkbox"){const r=ROWS[t.dataset.i];r.f[t.dataset.k[1]]=t.checked;r.touched=true}});
+function save(wb,name){XLSX.writeFile(wb,name)}
+$("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
+  const out=[["Input","Standard name","Status","International","Mainland","Overseas"]];
+  RAWS.forEach(x=>{const r=by.get(ek(x));if(!r){out.push([x,"","Blank","","",""]);return}
+    const ok=r.st!=="review";out.push([x,ok?r.u:"",ok?(r.st==="auto"?"Auto":"Confirmed"):"Unconfirmed",r.f.i?"Y":"",r.f.m?"Y":"",r.f.o?"Y":""])});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(out),"Result");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...NEW]),"New mappings");save(wb,"PS_Result.xlsx")};
+$("dl2").onclick=()=>{const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([...HASH,...NEW]),"AllHashTable");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(SCH),"香港小學名單");save(wb,"PS_Mapping_updated.xlsx")};
+</script></body></html>
