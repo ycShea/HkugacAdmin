@@ -96,11 +96,11 @@ $("go").onclick=async()=>{
     else{msg.textContent="Reading Google Sheet…";HASH=await gs("AllHashTable");SCH=await gs("香港小學名單");
       if(!/input/i.test(HASH[0]?.[0]))throw new Error("AllHashTable did not load correctly (check the sheet name).");if(SCH.length<2)throw new Error("香港小學名單 did not load correctly.")}
     HE=new Map();HN=new Map();AB=new Map();DM=new Map();
-    HASH.slice(1).forEach(([i,u])=>{if(!i||!u)return;HE.set(ek(i),u);const k=sq(i);if(!HN.has(k))HN.set(k,new Set());HN.get(k).add(u)});
+    HASH.slice(1).forEach(([i0,u0])=>{if(!i0||!u0)return;const i=String(i0).trim(),u=String(u0).trim();HE.set(ek(i),u);const k=sq(i);if(!HN.has(k))HN.set(k,new Set());HN.get(k).add(u)});
     const cs=new Set();
-    SCH.slice(1).forEach(([n,ab,d])=>{if(!n)return;cs.add(n);DM.set(n,d||"");
+    SCH.slice(1).forEach(([n0,ab,d])=>{if(!n0)return;const n=String(n0).trim();cs.add(n);DM.set(n,d||"");
       if(ab){const k=ek(ab);if(!AB.has(k))AB.set(k,new Set());AB.get(k).add(n)}});
-    HASH.slice(1).forEach(([,u])=>{if(u)cs.add(u)});
+    HASH.slice(1).forEach(([,u])=>{if(u)cs.add(String(u).trim())});
     CANON=[...cs];
     IDX=CANON.map(mkIdx);
     $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("");
