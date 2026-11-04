@@ -66,8 +66,17 @@ const RO=/canada|vancouver|toronto|\buk\b|england|london|australia|sydney|melbou
 let HE,HN,AB,DM,CANON,IDX,RAWS,ROWS,NEW,HASH,SCH,NOTE;
 function guess(r){const s=t2(r.input+" "+(r.u||"")),d=DM.get(r.u)||"";
   return{i:RI.test(s)||d==="國際學校",m:RM.test(s)||d==="國內學校",o:RO.test(s)}}
-function suggest(inp){const q=sq(inp);if(!q)return[];
-  const res=IDX.map(x=>({n:x.c,s:Math.max(one(q,x.zh),one(q,x.en),one(q,x.full))}));
+const STOP=new Set(["of","and","for","in","at"]),lat=t=>t.split(" ").filter(w=>w&&!/[\u4e00-\u9fff]/.test(w));
+function mkIdx(c){const tk=lat(norm(c.replace(/[\u4e00-\u9fff（）]+/g," ")));
+  return{c,tk,ini:tk.filter(w=>!STOP.has(w)).map(w=>w[0]).join(""),zh:sq((c.match(/[\u4e00-\u9fff（）()]+/g)||[]).join("")),en:sq(c.replace(/[\u4e00-\u9fff（）]+/g," ")),full:sq(c)}}
+function tokScore(qt,x){const ct=x.tk;if(!qt.length||!ct.length)return 0;let tq=0,mq=0,ac=false,cm=new Set();
+  for(const t of qt){tq+=t.length;
+    if((t.length>=4&&t===x.ini)||(t.length>=5&&x.ini.startsWith(t))){ac=true;mq+=t.length;continue}
+    const j=ct.findIndex(c=>c===t||(t.length>=4&&sim(t,c)>=.85));if(j>=0){cm.add(j);mq+=t.length}}
+  const qc=mq/tq,cc=ac?1:[...cm].reduce((s,j)=>s+ct[j].length,0)/ct.reduce((s,w)=>s+w.length,0);
+  return qc>=.7?qc*(.55+.4*cc):0}
+function suggest(inp){const q=sq(inp);if(!q)return[];const qt=lat(norm(inp));
+  const res=IDX.map(x=>({n:x.c,s:Math.max(one(q,x.zh),one(q,x.en),one(q,x.full),tokScore(qt,x))}));
   res.sort((a,b)=>b.s-a.s);return res.slice(0,3)}
 function match(inp){const k=ek(inp);
   if(HE.has(k))return{u:HE.get(k),st:"auto",sg:[]};
@@ -93,7 +102,7 @@ $("go").onclick=async()=>{
       if(ab){const k=ek(ab);if(!AB.has(k))AB.set(k,new Set());AB.get(k).add(n)}});
     HASH.slice(1).forEach(([,u])=>{if(u)cs.add(u)});
     CANON=[...cs];
-    IDX=CANON.map(c=>({c,zh:sq((c.match(/[\u4e00-\u9fff（）()]+/g)||[]).join("")),en:sq(c.replace(/[\u4e00-\u9fff（）]+/g," ")),full:sq(c)}));
+    IDX=CANON.map(mkIdx);
     $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("");
     const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
     RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim());
