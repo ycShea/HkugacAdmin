@@ -1,6 +1,6 @@
 # Timetable PDF → Excel
 
-📌 **[The most updated Apps](https://docs.google.com/spreadsheets/d/1xYObHWJb1gnJGi8C2buiP3n6oJhyYK5sOuAEwK7TGsU/edit?gid=1214948461#gid=1214948461)**
+📌 **[The most updated Apps in Spreadsheet](https://docs.google.com/spreadsheets/d/1xYObHWJb1gnJGi8C2buiP3n6oJhyYK5sOuAEwK7TGsU/edit?gid=1214948461#gid=1214948461)**
 🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/)**  
 
 A single-page web tool that turns the PDF timetables exported from **aSc Timetables** into Excel files, one tab for teacher timetables and one for class timetables. From the Class PDF you can also create a third tab, **Free lesson attendance**.
