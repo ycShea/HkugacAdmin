@@ -27,16 +27,14 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <div class="card"><div class="row">
 <label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label>
 <button class="p" id="go">Start matching</button></div>
-<details><summary>Settings: Google Sheet / Apps Script (saved in this browser only)</summary><div class="row" style="margin-top:8px">
+<details><summary>Settings: Google Sheet (saved in this browser only)</summary><div class="row" style="margin-top:8px">
 <label>Google Sheet URL (must be viewable by anyone with the link)<br><input type="text" id="su" size="58" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
-<label>Apps Script web app URL (for saving)<br><input type="text" id="au" size="50" placeholder="https://script.google.com/macros/s/.../exec"></label>
-<label>Token<br><input type="text" id="tk" size="14"></label>
 <label>Or use a mapping file instead<br><input type="file" id="fm" accept=".xlsx,.xls"></label></div></details>
 <div id="msg"></div></div>
 <div id="app" hidden>
 <div class="card row"><span id="stats"></span>
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
-<button id="ap" class="p">Save confirmed to Google Sheet</button><span id="am"></span><button id="dl1">Download results (.xlsx)</button><button id="dl2">Download updated mapping (.xlsx)</button></div>
+<button id="dl1" class="p">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
 <button id="top" class="p" title="Back to top">↑ Top</button>
@@ -130,38 +128,23 @@ $("tb").addEventListener("click",e=>{const t=e.target.closest("button[data-k]");
     if(!r.touched)r.f=guess(r);render()}
   else if(k==="skip"){r.u=r.input;r.st="skipped";render()}
   else if(k==="blank"){r.u="";r.st="blank";render()}
-  else if(k==="undo"){if(NEW.some(x=>ek(x[0])===ek(r.input)&&x.saved)){alert("Already saved to the Google Sheet, so it cannot be undone here.");return}
-    NEW=NEW.filter(x=>ek(x[0])!==ek(r.input));r.u=r.draft??"";r.st="review";render()}});
+  else if(k==="undo"){NEW=NEW.filter(x=>ek(x[0])!==ek(r.input));r.u=r.draft??"";r.st="review";render()}});
 $("tb").addEventListener("change",e=>{const t=e.target;if(t.type==="checkbox"){const r=ROWS[t.dataset.i];r.f[t.dataset.k[1]]=t.checked;r.touched=true}});
 const sid=()=>(($("su").value.match(/\/d\/([\w-]+)/)||[])[1]||"");
 async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Google Sheet URL in Settings, or choose a mapping file.");
   const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}${bust?"&_="+Date.now():""}`);
   if(!r.ok)throw new Error("Cannot read sheet "+name+" (HTTP "+r.status+")");
   const w=XLSX.read(await r.text(),{type:"string",raw:true});return XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1,defval:""})}
-function saveCfg(){try{[["su","ps_su"],["au","ps_au"],["tk","ps_tk"]].forEach(([i,k])=>localStorage.setItem(k,$(i).value.trim()))}catch(e){}}
-try{[["su","ps_su"],["au","ps_au"],["tk","ps_tk"]].forEach(([i,k])=>$(i).value=localStorage.getItem(k)||"")}catch(e){}
-$("ap").onclick=async()=>{const am=t=>$("am").textContent=t,au=$("au").value.trim(),pend=NEW.filter(x=>!x.saved);
-  if(!au){alert("Enter the Apps Script web app URL in Settings first.");return}
-  if(!pend.length){am("Nothing new to save.");return}
-  saveCfg();$("ap").disabled=true;am("Saving…");
-  const body=JSON.stringify({token:$("tk").value.trim(),rows:pend.map(x=>[x[0],x[1]])});let res=null;
-  try{const r=await fetch(au,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body});res=await r.json()}
-  catch(e){try{await fetch(au,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body})}catch(e2){am("Could not reach the Apps Script URL.");$("ap").disabled=false;return}}
-  if(res){if(res.ok){pend.forEach(x=>x.saved=true);am(`Saved: ${res.added} added, ${res.skipped} already in the sheet.`)}else am("Script error: "+res.error)}
-  else{await new Promise(z=>setTimeout(z,2500));
-    try{const s=new Set((await gs("AllHashTable",true)).map(r=>ek(r[0])));
-      if(pend.every(x=>s.has(ek(x[0])))){pend.forEach(x=>x.saved=true);am("Saved (verified in the sheet).")}
-      else am("Sent, but not verified yet. Check the sheet; sending again is safe (duplicates are skipped).")}
-    catch(e){am("Sent, but could not verify. Check the sheet; sending again is safe.")}}
-  $("ap").disabled=false};
+function saveCfg(){try{localStorage.setItem("ps_su",$("su").value.trim())}catch(e){}}
+try{$("su").value=localStorage.getItem("ps_su")||""}catch(e){}
 $("top").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 function save(wb,name){XLSX.writeFile(wb,name)}
 $("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
   const out=[["Input","Standard name","Status","International","Mainland","Overseas"]];
   RAWS.forEach(x=>{const r=by.get(ek(x));if(!r){out.push([x,"","Blank","","",""]);return}
     const ok=r.st!=="review";out.push([x,ok?r.u:"",({auto:"Auto",confirmed:"Confirmed",skipped:"Skipped",blank:"Blank"})[r.st]||"Unconfirmed",r.f.i?"Y":"",r.f.m?"Y":"",r.f.o?"Y":""])});
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(out),"Result");
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...NEW]),"New mappings");save(wb,"PS_Result.xlsx")};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...NEW]),"New mappings");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(out),"Result");save(wb,"PS_Result.xlsx")};
 $("dl2").onclick=()=>{const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([...HASH,...NEW]),"AllHashTable");
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(SCH),"香港小學名單");save(wb,"PS_Mapping_updated.xlsx")};
