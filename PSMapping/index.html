@@ -19,7 +19,7 @@ td input[type=text]{width:100%;box-sizing:border-box}
 .chip{font-size:12px;padding:2px 6px;margin:3px 3px 0 0;border-radius:12px}
 .st{padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
 .auto,.confirmed{background:var(--ok)}.skipped,.blank{background:var(--bd)}.review{background:var(--warn)}.none{background:var(--bad)}
-#top{position:fixed;right:16px;bottom:16px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.3);border-radius:20px;padding:8px 14px}
+#fab{position:fixed;right:16px;bottom:16px;z-index:5;display:flex;gap:8px}#fab button{box-shadow:0 2px 8px rgba(0,0,0,.3);border-radius:20px;padding:8px 14px}
 #msg{margin-top:8px;color:#c2410c}
 </style></head><body>
 <h1>PS Name Unifier</h1>
@@ -37,7 +37,7 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <button id="dl1" class="p">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
-<button id="top" class="p" title="Back to top">↑ Top</button>
+<div id="fab"><button id="call" class="p" hidden title="Confirm every Review row that has a suggested name">✔ Confirm all mapped</button><button id="top" class="p" title="Back to top">↑ Top</button></div>
 <datalist id="dl"></datalist>
 <script>
 const $=id=>document.getElementById(id);
@@ -103,13 +103,14 @@ $("go").onclick=async()=>{
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
-    msg.textContent="";$("app").hidden=false;render();
+    msg.textContent="";$("app").hidden=false;$("call").hidden=false;render();
   }catch(e){msg.textContent="Error: "+e.message+" — if the Google Sheet could not be read, make sure it is shared as \"Anyone with the link can view\", or choose a mapping file in Settings."}
 };
 const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 function render(){
   const f=$("flt").value,c={auto:0,confirmed:0,review:0,skipped:0,blank:0};ROWS.forEach(r=>c[r.st]++);
   $("stats").textContent=`${ROWS.length} unique names: ${c.auto} auto (100%), ${c.confirmed} confirmed, ${c.skipped} skipped, ${c.blank} blank, ${c.review} need review`;
+  const nm0=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!nm0;$("call").textContent=`✔ Confirm all mapped (${nm0})`;
   $("tb").innerHTML=ROWS.map((r,i)=>({r,i})).filter(({r})=>f==="all"||(f==="todo")===(r.st==="review")).map(({r,i})=>{
     const done=r.st!=="review",lab={auto:"Auto 100%",confirmed:"Confirmed",review:"Review",skipped:"Skipped",blank:"Blank"}[r.st];
     const nm=r.st==="auto"?esc(r.u):`<input type="text" list="dl" data-i="${i}" data-k="u" value="${esc(r.draft??r.u)}" ${done?"disabled":""}>`+
@@ -137,6 +138,12 @@ async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Go
   const w=XLSX.read(await r.text(),{type:"string",raw:true});return XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1,defval:""})}
 function saveCfg(){try{localStorage.setItem("ps_su",$("su").value.trim())}catch(e){}}
 try{$("su").value=localStorage.getItem("ps_su")||""}catch(e){}
+function confirmRow(r){const v=((r.draft??r.u)||"").trim();if(!v)return;r.u=v;r.st="confirmed";
+  if(!HE.has(ek(r.input))&&!NEW.some(x=>ek(x[0])===ek(r.input)))NEW.push([r.input,v]);if(!r.touched)r.f=guess(r)}
+$("call").onclick=()=>{const t=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim());
+  if(!t.length){alert("No Review rows have a suggested name to confirm.");return}
+  if(!confirm(`Confirm all ${t.length} Review rows that have a suggested name?\nYou can still Undo any row afterwards.`))return;
+  t.forEach(confirmRow);render()};
 $("top").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 function save(wb,name){XLSX.writeFile(wb,name)}
 $("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
