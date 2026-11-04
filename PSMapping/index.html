@@ -19,6 +19,7 @@ td input[type=text]{width:100%;box-sizing:border-box}
 .chip{font-size:12px;padding:2px 6px;margin:3px 3px 0 0;border-radius:12px}
 .st{padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
 .auto,.confirmed{background:var(--ok)}.skipped,.blank{background:var(--bd)}.review{background:var(--warn)}.none{background:var(--bad)}
+#top{position:fixed;right:16px;bottom:16px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.3);border-radius:20px;padding:8px 14px}
 #msg{margin-top:8px;color:#c2410c}
 </style></head><body>
 <h1>PS Name Unifier</h1>
@@ -38,6 +39,7 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <button id="ap" class="p">Save confirmed to Google Sheet</button><span id="am"></span><button id="dl1">Download results (.xlsx)</button><button id="dl2">Download updated mapping (.xlsx)</button></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
+<button id="top" class="p" title="Back to top">↑ Top</button>
 <datalist id="dl"></datalist>
 <script>
 const $=id=>document.getElementById(id);
@@ -102,7 +104,7 @@ $("go").onclick=async()=>{
     for(let i=0;i<items.length;i++){
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
-    ROWS.sort((x,y)=>(x.st==="auto")-(y.st==="auto"));
+    const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
     msg.textContent="";$("app").hidden=false;render();
   }catch(e){msg.textContent="Error: "+e.message+" — if the Google Sheet could not be read, make sure it is shared as \"Anyone with the link can view\", or choose a mapping file in Settings."}
 };
@@ -152,6 +154,7 @@ $("ap").onclick=async()=>{const am=t=>$("am").textContent=t,au=$("au").value.tri
       else am("Sent, but not verified yet. Check the sheet; sending again is safe (duplicates are skipped).")}
     catch(e){am("Sent, but could not verify. Check the sheet; sending again is safe.")}}
   $("ap").disabled=false};
+$("top").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 function save(wb,name){XLSX.writeFile(wb,name)}
 $("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
   const out=[["Input","Standard name","Status","International","Mainland","Overseas"]];
