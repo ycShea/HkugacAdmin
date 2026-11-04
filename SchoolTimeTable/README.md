@@ -1,6 +1,7 @@
 # Timetable PDF → Excel
 
-🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/)**
+📌 **[The most updated Apps](https://docs.google.com/spreadsheets/d/1xYObHWJb1gnJGi8C2buiP3n6oJhyYK5sOuAEwK7TGsU/edit?gid=1214948461#gid=1214948461)**
+🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/SchoolTimeTable/)**  
 
 A single-page web tool that turns the PDF timetables exported from **aSc Timetables** into Excel files, one tab for teacher timetables and one for class timetables. From the Class PDF you can also create a third tab, **Free lesson attendance**.
 
@@ -211,28 +212,28 @@ Step 2 on both tabs is **one shared list** of teacher initials, names and depart
 
 ## FAQ
 
-**Is my PDF uploaded?**
+**Is my PDF uploaded?**  
 No. Everything runs in your browser.
 
-**Why does a cell show a venue list, then a line break, then a list of teachers?**
+**Why does a cell show a venue list, then a line break, then a list of teachers?**  
 That teacher has no venue (or subject) of their own: the lesson has more teachers than venues (or subjects). See [the matching rules](#how-teachers-venues-and-subjects-are-matched).
 
-**Why are the venues of HD, MS, CASTLE and OPT not matched to teachers?**
+**Why are the venues of HD, MS, CASTLE and OPT not matched to teachers?**  
 They are whole-level group sessions, so every teacher row shows the full venue list. You can change which subjects are treated this way (see [Customising](#customising)).
 
-**Why does a teacher appear against every class in a group lesson?**
+**Why does a teacher appear against every class in a group lesson?**  
 The PDF lists all the teachers of a lesson on every class page and does not say who takes which class.
 
-**A teacher has no code. Why?**
+**A teacher has no code. Why?**  
 Their page has no lessons, so there is nothing to work the code out from. Load a teacher CSV that includes them, and the page takes the code from it when the name and department match.
 
-**What do E1, E2 and E3 mean in the Free lesson attendance tab?**
+**What do E1, E2 and E3 mean in the Free lesson attendance tab?**  
 They are the three elective groups of S4–S6. A block lesson such as `S5E1` is E1. A class that has two blocks gets the missing number for its other elective. Classes with no blocks (S5C and S6A in this timetable) use the mapping table.
 
-**Why do I have to map the electives of S5C and S6A?**
+**Why do I have to map the electives of S5C and S6A?**  
 Their timetables show the subjects (for example EC/PHY, BIO, CHEM) and no E1/E2/E3 block lessons, so the group of each subject is not in the PDF. The defaults are PHY or EC/PHY → E1, CHEM → E2, BIO → E3.
 
-**Can I use it for another school or another layout?**
+**Can I use it for another school or another layout?**  
 Only if the PDF has the same print layout. Otherwise the layout constants need adjusting (see below).
 
 ---
