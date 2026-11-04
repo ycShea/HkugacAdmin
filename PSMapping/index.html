@@ -12,7 +12,7 @@ h1{font-size:20px;margin:0 0 4px}.sub{opacity:.7;margin-bottom:12px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 button,select,input[type=text]{font:inherit;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
 button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
-.wrap{overflow-x:auto}.wrap{overflow-x:auto}.ac{display:flex;flex-wrap:wrap;gap:6px}
+.wrap{overflow-x:auto}.wrap{overflow-x:auto}.ac{display:flex;flex-wrap:wrap;gap:6px}.w{flex-basis:100%}
 table{border-collapse:collapse;width:100%;min-width:1100px}
 th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}
 td input[type=text]{width:100%;box-sizing:border-box}
@@ -119,20 +119,22 @@ const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"
 function render(){
   const f=$("flt").value,c={auto:0,confirmed:0,review:0,skipped:0,blank:0};ROWS.forEach(r=>c[r.st]++);
   $("stats").textContent=`${ROWS.length} unique names: ${c.auto} auto (100%), ${c.confirmed} confirmed, ${c.skipped} skipped, ${c.blank} blank, ${c.review} need review`;
-  const nm0=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!nm0;$("call").textContent=`✔ Confirm all mapped (${nm0})`;
+  updCall();
   $("tb").innerHTML=ROWS.map((r,i)=>({r,i})).filter(({r})=>f==="all"||(f==="todo")===(r.st==="review")).map(({r,i})=>{
     const done=r.st!=="review",lab={auto:"Auto 100%",confirmed:"Confirmed",review:"Review",skipped:"Skipped",blank:"Blank"}[r.st];
     const nm=r.st==="auto"?esc(r.u):`<input type="text" list="dl" data-i="${i}" data-k="u" value="${esc(r.draft??r.u)}" ${done?"disabled":""}>`+
       (done?"":r.sg.map(x=>`<button class="chip" data-i="${i}" data-k="chip" data-n="${esc(x.n)}">${esc(x.n)} (${Math.round(x.s*100)}%)</button>`).join(""));
     const act=r.st==="auto"?"":r.st==="review"?`<button class="p" data-i="${i}" data-k="ok">✔ Confirm</button> `:`<button data-i="${i}" data-k="undo">Undo</button>`;
-    const g=`<a href="https://www.google.com/search?q=${encodeURIComponent(r.input+" 小學 Hong Kong primary school")}" target="_blank" rel="noopener"><button type="button">🔍 Google</button></a>`;
+    const g=`<button type="button" data-i="${i}" data-k="g" title="Search Google in a side window">🔍 Google</button>`;
     const cb=k=>`<td class="cl"><label><input type="checkbox" data-i="${i}" data-k="f${k}" ${r.f[k]?"checked":""}> ${{i:"International",m:"Mainland",o:"Overseas"}[k]}</label></td>`;
-    return`<tr><td>${i+1}</td><td>${esc(r.input)} (${r.n})</td><td><span class="st ${r.st}">${lab}</span></td><td>${nm}</td><td><div class="ac">${act}${r.st==="review"?g+` <button data-i="${i}" data-k="skip" title="Use the input as the name">Skip</button> <button data-i="${i}" data-k="blank" title="Leave the name blank">Blank</button>`:""}</div></td>${cb("i")}${cb("m")}${cb("o")}</tr>`}).join("");
+    return`<tr><td>${i+1}</td><td>${esc(r.input)} (${r.n})</td><td><span class="st ${r.st}">${lab}</span></td><td>${nm}</td><td><div class="ac">${r.st==="review"?`<div class="w"><button type="button" data-i="${i}" data-k="copy" title="Copy the input into the name box so you can edit it and search">⧉ Copy input</button></div>`:""}${act}${r.st==="review"?g+` <button data-i="${i}" data-k="skip" title="Use the input as the name">Skip</button> <button data-i="${i}" data-k="blank" title="Leave the name blank">Blank</button><div class="w"><button type="button" data-i="${i}" data-k="clr" title="Empty the name box">✕ Clear</button></div>`:""}</div></td>${cb("i")}${cb("m")}${cb("o")}</tr>`}).join("");
 }
 $("flt").onchange=render;
 $("tb").addEventListener("input",e=>{const t=e.target;if(t.dataset.k==="u")ROWS[t.dataset.i].draft=t.value});
 $("tb").addEventListener("click",e=>{const t=e.target.closest("button[data-k]");if(!t)return;const r=ROWS[t.dataset.i],k=t.dataset.k;
-  if(k==="chip"){r.draft=t.dataset.n;if(!r.touched)r.f=guess({input:r.input,u:r.draft});render()}
+  if(k==="g"){gsearch(r.input)}
+  else if(k==="copy"||k==="clr"){const inp=t.closest("tr").querySelector('input[data-k="u"]');r.draft=k==="copy"?r.input:"";if(inp){inp.value=r.draft;inp.focus()}updCall()}
+  else if(k==="chip"){r.draft=t.dataset.n;if(!r.touched)r.f=guess({input:r.input,u:r.draft});render()}
   else if(k==="ok"){const v=(r.draft??r.u).trim();if(!v){alert("Please choose or type a standard name first.");return}
     r.u=v;r.st="confirmed";if(!HE.has(ek(r.input))&&!NEW.some(x=>ek(x[0])===ek(r.input)))NEW.push([r.input,v]);
     if(!r.touched)r.f=guess(r);render()}
@@ -147,6 +149,12 @@ async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Go
   const w=XLSX.read(await r.text(),{type:"string",raw:true});return XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1,defval:""})}
 function saveCfg(){try{localStorage.setItem("ps_su",$("su").value.trim())}catch(e){}}
 try{$("su").value=localStorage.getItem("ps_su")||""}catch(e){}
+function updCall(){const n=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!n;$("call").textContent=`✔ Confirm all mapped (${n})`}
+const newRows=()=>[...NEW,...ROWS.filter(r=>r.st==="auto"&&!HE.has(ek(r.input))).map(r=>[r.input,r.u])];
+function gsearch(q){const sw=screen.availWidth||1200,sh=screen.availHeight||800,w=Math.round(Math.min(720,sw*.45)),l=(screen.availLeft||0)+sw-w,tp=screen.availTop||0;
+  const win=window.open("https://www.google.com/search?q="+encodeURIComponent(q+" 小學 Hong Kong primary school"),"psSearch",`popup=yes,width=${w},height=${sh},left=${l},top=${tp}`);
+  if(!win){alert("The browser blocked the search window. Please allow popups for this site.");return}
+  try{win.opener=null}catch(e){}win.focus()}
 function confirmRow(r){const v=((r.draft??r.u)||"").trim();if(!v)return;r.u=v;r.st="confirmed";
   if(!HE.has(ek(r.input))&&!NEW.some(x=>ek(x[0])===ek(r.input)))NEW.push([r.input,v]);if(!r.touched)r.f=guess(r)}
 $("call").onclick=()=>{const t=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim());
@@ -159,9 +167,9 @@ $("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
   const out=[["Input","Standard name","Status","International","Mainland","Overseas"]];
   RAWS.forEach(x=>{const r=by.get(ek(x));if(!r){out.push([x,"","Blank","","",""]);return}
     const ok=r.st!=="review";out.push([x,ok?r.u:"",({auto:"Auto",confirmed:"Confirmed",skipped:"Skipped",blank:"Blank"})[r.st]||"Unconfirmed",r.f.i?"Y":"",r.f.m?"Y":"",r.f.o?"Y":""])});
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...NEW]),"New mappings");
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...newRows()]),"New mappings");
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(out),"Result");save(wb,"PS_Result.xlsx")};
 $("dl2").onclick=()=>{const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([...HASH,...NEW]),"AllHashTable");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([...HASH,...newRows()]),"AllHashTable");
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(SCH),"香港小學名單");save(wb,"PS_Mapping_updated.xlsx")};
 </script></body></html>
