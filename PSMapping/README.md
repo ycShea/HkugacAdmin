@@ -4,15 +4,6 @@
 
 🔗 **[PS Mapping (Most Updated)](https://docs.google.com/spreadsheets/d/1-tcFI4oAFt4nPBKSfCQcwHwCGd8QQJnW8eFmSBeVYjc/edit?gid=450436726#gid=450436726)**
 
-Code written by Claude Sonnet 5.5 (2026-11-05 version)
-
-index.html (GitHub)
-
-AppsScript.gs (GAS)
-
-Upload.html (GAS)
-
-
 A small web tool that turns the primary school names typed by families (spelling mistakes, abbreviations, Chinese or English) into one **standard school name**. It reads the mapping table kept in a Google Sheet, helps you decide the unclear cases, and gives you the new mappings to add back to the sheet.
 
 ## What is in this repository
@@ -155,3 +146,8 @@ No token or web app deployment is needed.
 | Ticks are wrong for a school | Set column D (`HK`, `International`, `China`, `Oversea`) for that school in `香港小學名單` |
 | A school never matches | Use **🔍 Google**, pick the correct name and **✓ Confirm**; it will match automatically next time |
 | New rows in `AllHashTable` have no type | Make sure your column C VLOOKUP covers the new rows |
+
+## Credits
+
+Code written by Claude Sonnet 5.5 (Anthropic), version 2026-11-05.
+Requested and maintained by <Ada@Claude / Primary School Mapping**>
