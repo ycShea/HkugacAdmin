@@ -32,9 +32,10 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <label>Or use a mapping file instead<br><input type="file" id="fm" accept=".xlsx,.xls"></label></div></details>
 <div id="msg"></div></div>
 <div id="app" hidden>
-<div class="card row"><span id="stats"></span>
+<div class="card"><div class="row">
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
 <button id="dl1" class="p">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
+<div id="stats" style="margin-top:10px"></div></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
 <div id="fab"><button id="call" class="p" hidden title="Confirm every Review row that has a suggested name">✔ Confirm all mapped</button><button id="top" class="p" title="Back to top">↑ Top</button></div>
@@ -129,7 +130,7 @@ $("go").onclick=async()=>{
 const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 function render(){
   const f=$("flt").value,c={auto:0,confirmed:0,review:0,skipped:0,blank:0};ROWS.forEach(r=>c[r.st]++);
-  $("stats").textContent=`${ROWS.length} unique names: ${c.auto} auto (100%), ${c.confirmed} confirmed, ${c.skipped} skipped, ${c.blank} blank, ${c.review} need review`;
+  $("stats").textContent=`${ROWS.length} unique names: ${c.auto} auto (100%), ${c.confirmed} confirmed, ${c.skipped} skipped, ${c.review} need review`;
   updCall();
   $("tb").innerHTML=ROWS.map((r,i)=>({r,i})).filter(({r})=>f==="all"||(f==="todo")===(r.st==="review")).map(({r,i})=>{
     const done=r.st!=="review",lab={auto:"Auto 100%",confirmed:"Confirmed",review:"Review",skipped:"Skipped",blank:"Blank"}[r.st];
@@ -138,7 +139,7 @@ function render(){
     const act=r.st==="auto"?"":r.st==="review"?`<button class="p" data-i="${i}" data-k="ok">✓ Confirm</button>`:`<button data-i="${i}" data-k="undo">Undo</button>`;
     const g=`<a href="https://www.google.com/search?q=${encodeURIComponent(r.input+" 小學 Hong Kong primary school")}" target="_blank" rel="noopener"><button type="button">🔍 Google</button></a>`;
     const cb=k=>`<td class="cl"><label><input type="checkbox" data-i="${i}" data-k="f${k}" ${r.f[k]?"checked":""}> ${{i:"International",m:"Mainland",o:"Overseas"}[k]}</label></td>`;
-    return`<tr><td>${i+1}</td><td>${esc(r.input)} (${r.n})</td><td><span class="st ${r.st}">${lab}</span>${done?"":`<div class="sb"><button type="button" data-i="${i}" data-k="copy" title="Copy the input into the name box so you can edit it and search">⧉ Copy</button><button type="button" data-i="${i}" data-k="clr" title="Empty the name box">✕ Clear</button></div>`}</td><td>${nm}</td><td><div class="ac"><div class="r">${act}${r.st==="review"?g:""}</div>${r.st==="review"?`<div class="r"><button data-i="${i}" data-k="skip" title="Use the input as the name">Skip</button><button data-i="${i}" data-k="blank" title="Leave the name blank">Blank</button></div>`:""}</div></td>${cb("i")}${cb("m")}${cb("o")}</tr>`}).join("");
+    return`<tr><td>${i+1}</td><td>${esc(r.input)} (${r.n})</td><td><span class="st ${r.st}">${lab}</span></td><td>${nm}</td><td><div class="ac"><div class="r">${act}${r.st==="review"?g:""}</div>${r.st==="review"?`<div class="r"><button data-i="${i}" data-k="skip" title="Skip this record">⏭ Skip</button></div><div class="r"><button type="button" data-i="${i}" data-k="copy" title="Copy the input into the name box so you can edit it and search">⧉ Copy</button><button type="button" data-i="${i}" data-k="clr" title="Empty the name box">✕ Clear</button></div>`:""}</div></td>${cb("i")}${cb("m")}${cb("o")}</tr>`}).join("");
 }
 $("flt").onchange=render;
 $("tb").addEventListener("input",e=>{const t=e.target;if(t.dataset.k==="u")ROWS[t.dataset.i].draft=t.value});
@@ -149,7 +150,6 @@ $("tb").addEventListener("click",e=>{const t=e.target.closest("button[data-k]");
     r.u=v;r.st="confirmed";if(!HE.has(ek(r.input))&&!NEW.some(x=>ek(x[0])===ek(r.input)))NEW.push([r.input,v]);
     if(!r.touched)r.f=guess(r);render()}
   else if(k==="skip"){r.u=r.input;r.st="skipped";render()}
-  else if(k==="blank"){r.u="";r.st="blank";render()}
   else if(k==="undo"){NEW=NEW.filter(x=>ek(x[0])!==ek(r.input));r.u=r.draft??"";r.st="review";render()}});
 $("tb").addEventListener("change",e=>{const t=e.target;if(t.type==="checkbox"){const r=ROWS[t.dataset.i];r.f[t.dataset.k[1]]=t.checked;r.touched=true}});
 // Optional rules.js (your AISearch function). Short Latin keywords (<=4 letters) must match a whole word.
