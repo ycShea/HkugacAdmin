@@ -2,7 +2,7 @@
 
 🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/PSMapping/)**
 
-🔗 **[PS Mapping (Most Updated)](https://docs.google.com/spreadsheets/d/1-tcFI4oAFt4nPBKSfCQcwHwCGd8QQJnW8eFmSBeVYjc/edit?gid=450436726#gid=450436726)**
+🔗 **[PS Mapping Spreadsheet (Most Updated)](https://docs.google.com/spreadsheets/d/1-tcFI4oAFt4nPBKSfCQcwHwCGd8QQJnW8eFmSBeVYjc/edit?gid=450436726#gid=450436726)**
 
 A small web tool that turns the primary school names typed by families (spelling mistakes, abbreviations, Chinese or English) into one **standard school name**. It uses the mapping table kept in a Google Sheet and helps you add new mappings back to it.
 
