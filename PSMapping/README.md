@@ -5,9 +5,13 @@
 🔗 **[PS Mapping (Most Updated)](https://docs.google.com/spreadsheets/d/1-tcFI4oAFt4nPBKSfCQcwHwCGd8QQJnW8eFmSBeVYjc/edit?gid=450436726#gid=450436726)**
 
 Code written by Claude Sonnet 5.5 (2026-11-05 version)
+
 index.html (GitHub)
+
 AppsScript.gs (GAS)
+
 Upload.html (GAS)
+
 
 A small web tool that turns the primary school names typed by families (spelling mistakes, abbreviations, Chinese or English) into one **standard school name**. It reads the mapping table kept in a Google Sheet, helps you decide the unclear cases, and gives you the new mappings to add back to the sheet.
 
