@@ -63,8 +63,10 @@ const RI=/international|國際|esf|academy|harrow|wycombe|kellett|dalton|basis|a
 const RM=/shenzhen|guangzhou|zhuhai|zhu hai|dongguan|huizhou|zhongshan|foshan|jiangmen|深圳|廣州|珠海|東莞|惠州|中山|佛山|江門|內地|mainland/i;
 const RO=/canada|vancouver|toronto|\buk\b|england|london|australia|sydney|melbourne|new zealand|auckland|singapore|taiwan|\busa\b|california|new york|加拿大|英國|澳洲|美國|新西蘭|新加坡|台灣|臺灣|溫哥華|多倫多/i;
 
-let HE,HN,AB,DM,CANON,IDX,RAWS,ROWS,NEW,HASH,SCH,NOTE;
-function guess(r){const s=t2(r.input+" "+(r.u||"")),d=DM.get(r.u)||"";
+let HE,HN,AB,DM,TY,RULES,CANON,IDX,RAWS,ROWS,NEW,HASH,SCH,NOTE;
+function guess(r){const ty=TY.get(r.u);
+  if(ty)return{i:ty==="international",m:ty==="china"||ty==="mainland",o:ty==="oversea"||ty==="overseas"};
+  const s=t2(r.input+" "+(r.u||"")),d=DM.get(r.u)||"";
   return{i:RI.test(s)||d==="國際學校",m:RM.test(s)||d==="國內學校",o:RO.test(s)}}
 const STOP=new Set(["of","and","for","in","at"]),lat=t=>t.split(" ").filter(w=>w&&!/[\u4e00-\u9fff]/.test(w));
 function mkIdx(c){const tk=lat(norm(c.replace(/[\u4e00-\u9fff（）]+/g," ")));
@@ -78,11 +80,20 @@ function tokScore(qt,x){const ct=x.tk;if(!qt.length||!ct.length)return 0;let tq=
 function suggest(inp){const q=sq(inp);if(!q)return[];const qt=lat(norm(inp));
   const res=IDX.map(x=>({n:x.c,s:Math.max(one(q,x.zh),one(q,x.en),one(q,x.full),tokScore(qt,x))}));
   res.sort((a,b)=>b.s-a.s);return res.slice(0,3)}
+function ruleMatch(inp){if(!RULES)return{names:[]};let o;try{o=String(RULES(String(inp)))}catch(e){return{names:[]}}
+  o=o.replace(/##/g,"").trim();if(!o||o==="NA"||o==="undefined")return{names:[]};
+  const amb=o.startsWith("?"),names=[];
+  for(const p of (amb?o.slice(1):o).split("\n").map(s=>s.trim()).filter(Boolean)){
+    let n=CANON.includes(p)?p:null;if(!n){const t=suggest(p)[0];if(t&&t.s>=.9)n=t.n}
+    if(n&&!names.includes(n))names.push(n)}
+  return{names,exact:!amb&&names.length===1}}
 function match(inp){const k=ek(inp);
   if(HE.has(k))return{u:HE.get(k),st:"auto",sg:[]};
   const h=HN.get(sq(inp));if(h&&h.size===1)return{u:[...h][0],st:"auto",sg:[]};
   let sg=suggest(inp);const ab=AB.get(k);
   if(ab&&ab.size===1){const n=[...ab][0];sg=[{n,s:.95},...sg.filter(x=>x.n!==n)].slice(0,3)}
+  const rr=ruleMatch(inp);
+  if(rr.names.length){sg=[...rr.names.map(n=>({n,s:1,rule:true})),...sg.filter(x=>!rr.names.includes(x.n))].slice(0,3);return{u:rr.exact?rr.names[0]:"",st:"review",sg}}
   return{u:sg.length&&sg[0].s>=.75?sg[0].n:"",st:"review",sg}}
 
 $("go").onclick=async()=>{
@@ -95,10 +106,10 @@ $("go").onclick=async()=>{
       if(!a||!s){msg.textContent="Sheets AllHashTable and 香港小學名單 were not found in the mapping workbook.";return}HASH=aoa(a);SCH=aoa(s)}
     else{msg.textContent="Reading Google Sheet…";HASH=await gs("AllHashTable");SCH=await gs("香港小學名單");
       if(!/input/i.test(HASH[0]?.[0]))throw new Error("AllHashTable did not load correctly (check the sheet name).");if(SCH.length<2)throw new Error("香港小學名單 did not load correctly.")}
-    HE=new Map();HN=new Map();AB=new Map();DM=new Map();
+    HE=new Map();HN=new Map();AB=new Map();DM=new Map();TY=new Map();
     HASH.slice(1).forEach(([i0,u0])=>{if(!i0||!u0)return;const i=String(i0).trim(),u=String(u0).trim();HE.set(ek(i),u);const k=sq(i);if(!HN.has(k))HN.set(k,new Set());HN.get(k).add(u)});
     const cs=new Set();
-    SCH.slice(1).forEach(([n0,ab,d])=>{if(!n0)return;const n=String(n0).trim();cs.add(n);DM.set(n,d||"");
+    SCH.slice(1).forEach(([n0,ab,d,ty])=>{if(!n0)return;const n=String(n0).trim();cs.add(n);DM.set(n,d||"");TY.set(n,String(ty||"").trim().toLowerCase());
       if(ab){const k=ek(ab);if(!AB.has(k))AB.set(k,new Set());AB.get(k).add(n)}});
     HASH.slice(1).forEach(([,u])=>{if(u)cs.add(String(u).trim())});
     CANON=[...cs];
@@ -123,7 +134,7 @@ function render(){
   $("tb").innerHTML=ROWS.map((r,i)=>({r,i})).filter(({r})=>f==="all"||(f==="todo")===(r.st==="review")).map(({r,i})=>{
     const done=r.st!=="review",lab={auto:"Auto 100%",confirmed:"Confirmed",review:"Review",skipped:"Skipped",blank:"Blank"}[r.st];
     const nm=r.st==="auto"?esc(r.u):`<input type="text" list="dl" data-i="${i}" data-k="u" value="${esc(r.draft??r.u)}" ${done?"disabled":""}>`+
-      (done?"":r.sg.map(x=>`<button class="chip" data-i="${i}" data-k="chip" data-n="${esc(x.n)}">${esc(x.n)} (${Math.round(x.s*100)}%)</button>`).join(""));
+      (done?"":r.sg.map(x=>`<button class="chip" data-i="${i}" data-k="chip" data-n="${esc(x.n)}">${esc(x.n)} (${x.rule?"rule":Math.round(x.s*100)+"%"})</button>`).join(""));
     const act=r.st==="auto"?"":r.st==="review"?`<button class="p" data-i="${i}" data-k="ok">✓ Confirm</button>`:`<button data-i="${i}" data-k="undo">Undo</button>`;
     const g=`<a href="https://www.google.com/search?q=${encodeURIComponent(r.input+" 小學 Hong Kong primary school")}" target="_blank" rel="noopener"><button type="button">🔍 Google</button></a>`;
     const cb=k=>`<td class="cl"><label><input type="checkbox" data-i="${i}" data-k="f${k}" ${r.f[k]?"checked":""}> ${{i:"International",m:"Mainland",o:"Overseas"}[k]}</label></td>`;
@@ -141,6 +152,20 @@ $("tb").addEventListener("click",e=>{const t=e.target.closest("button[data-k]");
   else if(k==="blank"){r.u="";r.st="blank";render()}
   else if(k==="undo"){NEW=NEW.filter(x=>ek(x[0])!==ek(r.input));r.u=r.draft??"";r.st="review";render()}});
 $("tb").addEventListener("change",e=>{const t=e.target;if(t.type==="checkbox"){const r=ROWS[t.dataset.i];r.f[t.dataset.k[1]]=t.checked;r.touched=true}});
+// Optional rules.js (your AISearch function). Short Latin keywords (<=4 letters) must match a whole word.
+String.prototype.searchFor=function(t){t=String(t).toLowerCase();const s=this.toLowerCase(),k=t.trim();
+  if(k&&k.length<=4&&!/[^\x00-\x7f]/.test(k))return new RegExp("(^|[^a-z0-9])"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"($|[^a-z0-9])").test(s);
+  return s.indexOf(t)!==-1};
+async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"});if(!r.ok)return;let s=await r.text();
+  s=s.replace(/String\.prototype\.searchFor\s*=\s*function\s*\(target\)\s*\{[\s\S]*?\n\}/,"")
+    .replace(/result\s*=\s*lookupFromAllHashTable\(input\)/,'result = ""')
+    .replace(/function AISearch\(input\)\s*\{/,"function AISearch(input){var result,target,target1,target2,target3,target4,target5,target6,target7,target8,target9,target10,target11,target12,targetA,targetB,targetC,targetD;")
+    .replace(/("SKHSJPS"\)\s*\{\s*return\s+)target2/,"$1target")
+    .replace(/("HKMLCPS"\)\s*\{\s*return\s+)target;/,"$1target3;")
+    .replace(/input\.searchFor\("Keiwan"\)\s*\|\|\s*input\.searchFor\("Kaiwan"\)\s*&&/g,'(input.searchFor("Keiwan") || input.searchFor("Kaiwan")) &&');
+  RULES=new Function(s+"\nreturn AISearch;")();
+  document.querySelector(".sub").textContent+=" Rules file loaded."}catch(e){console.warn("rules.js not used:",e)}}
+loadRules();
 const sid=()=>(($("su").value.match(/\/d\/([\w-]+)/)||[])[1]||"");
 async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Google Sheet URL in Settings, or choose a mapping file.");
   const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}${bust?"&_="+Date.now():""}`);
