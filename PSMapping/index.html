@@ -41,6 +41,7 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <div class="card"><div class="row">
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
 <button id="dl1" class="p">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
+<button id="dl1" class="p">Download new mapping</button><button id="sv" class="p">Save to AllHashTable</button>
 <div id="stats" style="margin-top:10px"></div></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
@@ -104,12 +105,15 @@ function match(inp){const k=ek(inp);
   return{u:sg.length&&sg[0].s>=.75?sg[0].n:"",st:"review",sg}}
 
 $("go").onclick=async()=>{
-  const msg=$("msg");msg.textContent="";
-  if(!$("fl").files[0]){msg.textContent="Please choose the student list.";return}
+  const useApi=!!API&&!$("fl").files[0];
+  if(!useApi&&!$("fl").files[0]){msg.textContent="Please choose the student list.";return}
   try{
     const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
     saveCfg();
-    if($("fm").files[0]){const wm=XLSX.read(await $("fm").files[0].arrayBuffer());const a=wm.Sheets["AllHashTable"],s=wm.Sheets["香港小學名單"];
+    if(useApi)RAWS=APIRAWS;else{const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
+        RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim())}
+      HASH=d.hash;SCH=d.sch;APIRAWS=d.schools}
+    else if($("fm").files[0]){const wm=XLSX.read(await $("fm").files[0].arrayBuffer());const a=wm.Sheets["AllHashTable"],s=wm.Sheets["香港小學名單"];
       if(!a||!s){msg.textContent="Sheets AllHashTable and 香港小學名單 were not found in the mapping workbook.";return}HASH=aoa(a);SCH=aoa(s)}
     else{msg.textContent="Reading Google Sheet…";HASH=await gs("AllHashTable");SCH=await gs("香港小學名單");
       if(!/input/i.test(HASH[0]?.[0]))throw new Error("AllHashTable did not load correctly (check the sheet name).");if(SCH.length<2)throw new Error("香港小學名單 did not load correctly.")}
@@ -172,6 +176,21 @@ async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"}
   RULES=new Function(s+"\nreturn AISearch;")();
   document.querySelector(".sub").textContent+=" Rules file loaded."}catch(e){console.warn("rules.js not used:",e)}}
 loadRules();
+let API=null,TOK="",APIRAWS=[];
+try{const h=new URLSearchParams(location.hash.slice(1));
+  if(h.get("api")){localStorage.setItem("ps_api",h.get("api"));localStorage.setItem("ps_tok",h.get("token")||"");history.replaceState(null,"",location.pathname+location.search)}
+  API=localStorage.getItem("ps_api");TOK=localStorage.getItem("ps_tok")||""}catch(e){}
+if(API)document.querySelector(".sub").textContent+=" Connected to your Sheet: no file needed.";
+async function api(action,data){const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,token:TOK,...data})});
+  const j=await r.json();if(!j.ok)throw new Error(j.error||"Request failed");return j}
+$("sv").onclick=async()=>{const rows=newRows();
+  if(!API){alert("Not connected. Open this page from the Sheet menu [PS Tools] → Update PS list.");return}
+  if(!rows.length){alert("Nothing to save yet. Confirm some rows first.");return}
+  try{const c=await api("check",{rows});
+    if(!c.add){alert("Nothing new to save ("+c.same+" already in AllHashTable).");return}
+    if(!confirm("Save "+c.add+" new rows to AllHashTable?"+(c.diff?"\n"+c.diff+" already exist with a different name (left unchanged).":"")))return;
+    const r=await api("append",{rows});alert(r.added+" rows added to AllHashTable.")
+  }catch(e){alert("Error: "+e.message)}};
 const sid=()=>(($("su").value.match(/\/d\/([\w-]+)/)||[])[1]||"");
 async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Google Sheet URL in Settings, or choose a mapping file.");
   const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}${bust?"&_="+Date.now():""}`);
