@@ -14,7 +14,7 @@ button,select,input[type=text]{font:inherit;padding:5px 9px;border:1px solid var
 button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
 .wrap{overflow-x:auto}.wrap{overflow-x:auto}.ac{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.r{display:flex;gap:6px;align-items:center}.r a{display:flex;text-decoration:none}.r a button{text-decoration:none}.ac button{height:30px;box-sizing:border-box;padding:0 10px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.sb{display:flex;flex-direction:column;gap:6px;margin-top:8px;align-items:flex-start}.sb button{white-space:nowrap}
 table{border-collapse:collapse;width:100%;min-width:1100px}
-th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}
+th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}details.card{margin-top:0}details.card ol{margin:8px 0 0;padding-left:22px}details.card li{margin:4px 0}summary{cursor:pointer}
 td input[type=text]{width:100%;box-sizing:border-box}
 .chip{font-size:12px;padding:2px 6px;margin:3px 3px 0 0;border-radius:12px}
 .st{padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
@@ -24,6 +24,14 @@ td input[type=text]{width:100%;box-sizing:border-box}
 </style></head><body>
 <h1>PS Name Unifier</h1>
 <div class="sub">Everything runs in your browser. Your files are never uploaded anywhere.</div>
+<details class="card" open><summary><b>How to use</b></summary>
+<ol>
+<li>In the Google Sheet, click <b>[PS Tools] → Export unmatched schools</b> and download the CSV.</li>
+<li>Open <b>Settings</b> below and paste the Google Sheet URL (only needed once). Choose the CSV under <b>Student list</b> and click <b>Start matching</b>.</li>
+<li>Check each row: click <b>✓ Confirm</b>, or <b>✔ Confirm all mapped</b> (bottom right). Use <b>🔍 Google</b> if unsure, and <b>⏭ Skip</b> to leave a row out.</li>
+<li>Click <b>Download new mapping</b>. This saves <b>PS_Result.xlsx</b>.</li>
+<li>Go back to the Google Sheet and click <b>[PS Tools] → Append new mapping to AllHashTable</b>, then choose <b>PS_Result.xlsx</b>. The new rows are added at the bottom of AllHashTable.</li>
+</ol></details>
 <div class="card"><div class="row">
 <label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label>
 <button class="p" id="go">Start matching</button></div>
