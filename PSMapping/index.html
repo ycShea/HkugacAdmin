@@ -31,13 +31,13 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <li>Click <b>Save to AllHashTable</b>.</li>
 <li>Go back to the Google Sheet. The new rows are at the bottom of <b>AllHashTable</b>.</li>
 </ol>
-<p class="note">First time, or after making a copy of the spreadsheet: click <b>⚙ Settings</b> and paste the web app URL and token of that spreadsheet.</p></details>
-<div class="card"><div class="row"><button class="p" id="go">Start matching</button><button id="gear" title="Change web app URL / token">⚙ Settings</button></div>
+<p class="note">First time, or after making a copy of the spreadsheet: open <b>Settings</b> below and paste the web app URL and token of that spreadsheet.</p></details>
+<div class="card"><div class="row"><button class="p" id="go">Start matching</button></div>
 <details id="set"><summary>Settings: Google Sheet (saved in this browser only)</summary>
 <div class="row" style="margin-top:8px">
 <label>Web app URL of this spreadsheet (ends with /exec)<br><input type="text" id="au" size="64" placeholder="https://script.google.com/macros/s/.../exec"></label>
 <label>Token<br><input type="password" id="tk" size="18"></label></div>
-<p class="note">In the Google Sheet, click <b>[PS Tools] → Show web app URL</b> to get the URL. Every copy of the spreadsheet has its own URL, so pasting a different URL here switches to that copy.</p></details>
+<p class="note">In the Google Sheet, click <b>[PS Tools] → Show Web app URL</b> to get the URL and to set the Token. Use the URL that starts with <b>https://script.google.com/macros/s/</b> and ends with <b>/exec</b> (the one from Deploy → Manage deployments). Every copy of the spreadsheet has its own URL. This box is hidden once the URL and token work, and it comes back if Start matching fails.</p></details>
 <details id="man"><summary>Manual route: upload a file instead (click to show)</summary>
 <div class="row" style="margin-top:8px"><label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label><button id="gof">Start matching (file)</button></div>
 <p class="note">The standard names still come from the spreadsheet above. When you use this route, <b>Download new mapping</b> appears next to the other buttons.</p></details>
@@ -110,19 +110,18 @@ function match(inp){const k=ek(inp);
 
 let MODE="auto";
 const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-function showSet(){$("set").hidden=false;$("set").open=true}
+const wantSettings=()=>/[?&]settings/.test(location.search);
+function showSettings(){$("set").hidden=false;$("set").open=true}
 async function callApp(action,extra){
-  let url=$("au").value.trim().replace(/\/a\/[^\/]+\/macros\//,"/macros/");
-  $("au").value=url;
-  const token=$("tk").value;
-  if(!url||!token){showSet();throw new Error("Please paste the web app URL and the token in Settings first.")}
-  if(!/\/exec(\?|$)/.test(url)){showSet();throw new Error("The web app URL must end with /exec (copy it from [PS Tools] → Show web app URL).")}
+  const url=$("au").value.trim(),token=$("tk").value;
+  if(!url||!token){showSettings();throw new Error("Please paste the web app URL and the token in Settings first.")}
+  if(!/^https:\/\/script\.google\.com\/.+\/exec(\?|$)/.test(url)){showSettings();throw new Error("The web app URL must start with https://script.google.com/ and end with /exec (copy it from [PS Tools] → Show Web app URL).")}
   let res,j;
   try{res=await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,token,...extra})})}
-  catch(e){showSet();throw new Error("Cannot reach the web app. Check your internet connection and that the URL is correct.")}
+  catch(e){showSettings();throw new Error("Cannot reach the web app. Check your internet connection and that the URL is correct.")}
   try{j=await res.json()}
-  catch(e){showSet();throw new Error("The web app did not return data (for example \"Unauthorized\"). In the Google Sheet, deploy it as a Web app with Execute as: Me and Who has access: Anyone, deploy the latest version, then paste the URL of this copy of the spreadsheet here.")}
-  if(!j.ok){if(j.error==="bad token"||/token/.test(j.error))showSet();throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error)}
+  catch(e){showSettings();throw new Error("The web app did not return data (for example \"Unauthorized\"). In the Google Sheet, deploy it as a Web app with Execute as: Me and Who has access: Anyone, deploy the latest version, then paste the URL of this copy of the spreadsheet here.")}
+  if(!j.ok){showSettings();throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error)}
   return j}
 function buildMaps(){
   HE=new Map();HN=new Map();AB=new Map();DM=new Map();TY=new Map();
@@ -139,7 +138,6 @@ async function start(mode){
     if(mode==="manual"&&!$("fl").files[0]){msg.textContent="Please choose the student list.";$("man").open=true;return}
     saveCfg();msg.textContent="Loading from the Google Sheet…";
     const d=await callApp("load");
-    $("set").open=false;chkSet();
     HASH=[["Input","Unified"],...d.hash];SCH=[["學校名稱","簡稱","地區","類型"],...d.schools];
     buildMaps();let items;
     if(mode==="manual"){
@@ -153,7 +151,7 @@ async function start(mode){
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
-    msg.textContent="";$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
+    msg.textContent="";if(!wantSettings())$("set").hidden=true;$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
   }catch(e){msg.textContent="Error: "+e.message}}
 $("go").onclick=()=>start("auto");
 $("gof").onclick=()=>start("manual");
@@ -206,9 +204,7 @@ async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"}
 loadRules();
 function saveCfg(){try{localStorage.setItem("ps_au",$("au").value.trim());localStorage.setItem("ps_tk",$("tk").value)}catch(e){}}
 try{$("au").value=localStorage.getItem("ps_au")||"";$("tk").value=localStorage.getItem("ps_tk")||""}catch(e){}
-function chkSet(){$("set").hidden=!!($("au").value.trim()&&$("tk").value)}
-chkSet();
-$("gear").onclick=()=>{$("set").hidden=false;$("set").open=!$("set").open};
+$("set").hidden=!!($("au").value&&$("tk").value)&&!wantSettings();
 function updCall(){const n=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!n;$("call").textContent=`✔ Confirm all mapped (${n})`}
 const newRows=()=>[...NEW,...ROWS.filter(r=>r.st==="auto"&&!HE.has(ek(r.input))).map(r=>[r.input,r.u])];
 function confirmRow(r){const v=((r.draft??r.u)||"").trim();if(!v)return;r.u=v;r.st="confirmed";
