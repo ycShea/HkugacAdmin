@@ -110,16 +110,19 @@ function match(inp){const k=ek(inp);
 
 let MODE="auto";
 const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+function showSet(){$("set").hidden=false;$("set").open=true}
 async function callApp(action,extra){
-  const url=$("au").value.trim(),token=$("tk").value;
-  if(!url||!token){$("set").open=true;throw new Error("Please paste the web app URL and the token in Settings first.")}
-  if(!/\/exec(\?|$)/.test(url)){$("set").open=true;throw new Error("The web app URL must end with /exec (copy it from [PS Tools] → Show web app URL).")}
+  let url=$("au").value.trim().replace(/\/a\/[^\/]+\/macros\//,"/macros/");
+  $("au").value=url;
+  const token=$("tk").value;
+  if(!url||!token){showSet();throw new Error("Please paste the web app URL and the token in Settings first.")}
+  if(!/\/exec(\?|$)/.test(url)){showSet();throw new Error("The web app URL must end with /exec (copy it from [PS Tools] → Show web app URL).")}
   let res,j;
   try{res=await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,token,...extra})})}
-  catch(e){$("set").open=true;throw new Error("Cannot reach the web app. Check your internet connection and that the URL is correct.")}
+  catch(e){showSet();throw new Error("Cannot reach the web app. Check your internet connection and that the URL is correct.")}
   try{j=await res.json()}
-  catch(e){$("set").open=true;throw new Error("The web app did not return data (for example \"Unauthorized\"). In the Google Sheet, deploy it as a Web app with Execute as: Me and Who has access: Anyone, deploy the latest version, then paste the URL of this copy of the spreadsheet here.")}
-  if(!j.ok)throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error);
+  catch(e){showSet();throw new Error("The web app did not return data (for example \"Unauthorized\"). In the Google Sheet, deploy it as a Web app with Execute as: Me and Who has access: Anyone, deploy the latest version, then paste the URL of this copy of the spreadsheet here.")}
+  if(!j.ok){if(j.error==="bad token"||/token/.test(j.error))showSet();throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error)}
   return j}
 function buildMaps(){
   HE=new Map();HN=new Map();AB=new Map();DM=new Map();TY=new Map();
