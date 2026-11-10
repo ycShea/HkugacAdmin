@@ -20,7 +20,7 @@ td input[type=text]{width:100%;box-sizing:border-box}
 .st{padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
 .auto,.confirmed{background:var(--ok)}.skipped,.blank{background:var(--bd)}.review{background:var(--warn)}.none{background:var(--bad)}
 #fab{position:fixed;right:16px;bottom:16px;z-index:5;display:flex;gap:8px}#fab button{box-shadow:0 2px 8px rgba(0,0,0,.3);border-radius:20px;padding:8px 14px}
-#msg{margin-top:8px;color:#c2410c}
+#msg{margin-top:8px}#msg.err{color:#c2410c}
 </style></head><body>
 <h1>PS Name Unifier</h1>
 <div class="sub">Everything runs in your browser. Your files are never uploaded anywhere.</div>
@@ -110,8 +110,7 @@ function match(inp){const k=ek(inp);
 
 let MODE="auto";
 const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-const wantSettings=()=>/[?&]settings/.test(location.search);
-function showSettings(){$("set").hidden=false;$("set").open=true}
+function showSettings(){$("set").open=true}   // Settings is always visible; it is folded when URL and Token work, open when something is missing or wrong
 async function callApp(action,extra){
   const url=$("au").value.trim(),token=$("tk").value;
   if(!url||!token){showSettings();throw new Error("Please paste the web app URL and the token in Settings first.")}
@@ -121,7 +120,10 @@ async function callApp(action,extra){
   catch(e){showSettings();throw new Error("Cannot reach the web app. Check your internet connection and that the URL is correct.")}
   try{j=await res.json()}
   catch(e){showSettings();throw new Error("The web app did not return data (for example \"Unauthorized\"). In the Google Sheet, deploy it as a Web app with Execute as: Me and Who has access: Anyone, deploy the latest version, then paste the URL of this copy of the spreadsheet here.")}
-  if(!j.ok){showSettings();throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error)}
+  if(!j.ok){const tok=j.error==="bad token"||/^token not set/.test(j.error||"");
+    if(tok)showSettings();else $("set").open=false;   // wrong/missing Token: open Settings. Other errors (e.g. sheet not found): URL and Token are fine, so fold
+    throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error)}
+  $("set").open=false;   // the web app answered and accepted the Token: fold Settings
   return j}
 function buildMaps(){
   HE=new Map();HN=new Map();AB=new Map();DM=new Map();TY=new Map();
@@ -133,10 +135,12 @@ function buildMaps(){
   CANON=[...cs];IDX=CANON.map(mkIdx);
   $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("")}
 async function start(mode){
-  const msg=$("msg");msg.textContent="";$("sm").textContent="";MODE=mode;
+  const msg=$("msg");msg.textContent="";msg.className="";$("sm").textContent="";MODE=mode;
   try{
     if(mode==="manual"&&!$("fl").files[0]){msg.textContent="Please choose the student list.";$("man").open=true;return}
-    saveCfg();msg.textContent="Loading from the Google Sheet…";
+    saveCfg();
+    if(!$("au").value.trim()||!$("tk").value){showSettings();msg.textContent="Please enter the Web app URL and the Token below.";return}
+    msg.textContent="Loading from the Google Sheet…";
     const d=await callApp("load");
     HASH=[["Input","Unified"],...d.hash];SCH=[["學校名稱","簡稱","地區","類型"],...d.schools];
     buildMaps();let items;
@@ -151,8 +155,8 @@ async function start(mode){
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
-    msg.textContent="";if(!wantSettings())$("set").hidden=true;$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
-  }catch(e){msg.textContent="Error: "+e.message}}
+    msg.textContent="";$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
+  }catch(e){msg.className="err";msg.textContent="Error: "+e.message}}
 $("go").onclick=()=>start("auto");
 $("gof").onclick=()=>start("manual");
 $("sv").onclick=async()=>{const sm=$("sm"),rows=newRows();
@@ -204,7 +208,7 @@ async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"}
 loadRules();
 function saveCfg(){try{localStorage.setItem("ps_au",$("au").value.trim());localStorage.setItem("ps_tk",$("tk").value)}catch(e){}}
 try{$("au").value=localStorage.getItem("ps_au")||"";$("tk").value=localStorage.getItem("ps_tk")||""}catch(e){}
-$("set").hidden=!!($("au").value&&$("tk").value)&&!wantSettings();
+$("set").open=!($("au").value&&$("tk").value);   // folded when URL and Token are saved, open when one is missing
 function updCall(){const n=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!n;$("call").textContent=`✔ Confirm all mapped (${n})`}
 const newRows=()=>[...NEW,...ROWS.filter(r=>r.st==="auto"&&!HE.has(ek(r.input))).map(r=>[r.input,r.u])];
 function confirmRow(r){const v=((r.draft??r.u)||"").trim();if(!v)return;r.u=v;r.st="confirmed";
