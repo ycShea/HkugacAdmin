@@ -1,24 +1,18 @@
 <!doctype html>
-<!--
-  PS Mapping: matches school names to standard names (runs in the browser)
-  Code written by Claude Sonnet 5.5 (Anthropic), version 2026-11-10
-  Requested and maintained by: <Ada@Claude / Primary School Mapping**>
-  Used with: AppsScript.gs and Upload.html (Google Sheet menu)
--->
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PS Name Unifier</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{color-scheme:light dark;--bg:#fafafa;--fg:#1d1d1f;--card:#fff;--bd:#d0d0d5;--ac:#2563eb;--ok:#d9f2df;--warn:#fff1c2;--bad:#fcd9d9;--red:#dc2626}
-@media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#f0f0f2;--card:#26262b;--bd:#46464e;--ac:#6ea0ff;--ok:#1f4a2c;--warn:#524512;--bad:#5a2323;--red:#ff7b7b}}
+:root{color-scheme:light dark;--bg:#fafafa;--fg:#1d1d1f;--card:#fff;--bd:#d0d0d5;--ac:#2563eb;--ok:#d9f2df;--warn:#fff1c2;--bad:#fcd9d9}
+@media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#f0f0f2;--card:#26262b;--bd:#46464e;--ac:#6ea0ff;--ok:#1f4a2c;--warn:#524512;--bad:#5a2323}}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,"Noto Sans TC",sans-serif}
 h1{font-size:20px;margin:0 0 4px}.sub{opacity:.7;margin-bottom:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 button,select,input[type=text]{font:inherit;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
 button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
-.wrap{overflow-x:auto}.ac{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.r{display:flex;gap:6px;align-items:center}.r a{display:flex;text-decoration:none}.r a button{text-decoration:none}.ac button{height:30px;box-sizing:border-box;padding:0 10px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.sb{display:flex;flex-direction:column;gap:6px;margin-top:8px;align-items:flex-start}.sb button{white-space:nowrap}
+.wrap{overflow-x:auto}.wrap{overflow-x:auto}.ac{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.r{display:flex;gap:6px;align-items:center}.r a{display:flex;text-decoration:none}.r a button{text-decoration:none}.ac button{height:30px;box-sizing:border-box;padding:0 10px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.sb{display:flex;flex-direction:column;gap:6px;margin-top:8px;align-items:flex-start}.sb button{white-space:nowrap}
 table{border-collapse:collapse;width:100%;min-width:1100px}
 th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}
 td input[type=text]{width:100%;box-sizing:border-box}
@@ -27,35 +21,20 @@ td input[type=text]{width:100%;box-sizing:border-box}
 .auto,.confirmed{background:var(--ok)}.skipped,.blank{background:var(--bd)}.review{background:var(--warn)}.none{background:var(--bad)}
 #fab{position:fixed;right:16px;bottom:16px;z-index:5;display:flex;gap:8px}#fab button{box-shadow:0 2px 8px rgba(0,0,0,.3);border-radius:20px;padding:8px 14px}
 #msg{margin-top:8px;color:#c2410c}
-.guide{margin-bottom:12px}.guide b.t{font-size:16px}.guide ol{margin:6px 0 0;padding-left:22px}.guide li{margin-bottom:3px}
-.off{color:var(--red);font-size:20px;font-weight:700;line-height:1.3}.offsub{color:var(--red);margin-top:4px}
 </style></head><body>
 <h1>PS Name Unifier</h1>
-<div class="sub">Your data is sent only to your own Google Sheet.</div>
-<div class="card">
-<div id="gOn" class="guide" hidden><b class="t">How to use</b><ol>
-<li>Click <b>Start matching</b>. The tool loads the schools in <i>AdmInfoDay(Responses)</i> that are not yet in <i>AllHashTable</i>.</li>
-<li>Check each row: click <b>✓ Confirm</b>, or <b>✔ Confirm all mapped</b> (bottom right). Use <b>🔍 Google</b> if unsure, <b>⏭ Skip</b> to leave a row out.</li>
-<li>Click <b>Save to AllHashTable</b>.</li>
-<li>Go back to the Google Sheet. The new rows are at the bottom of <i>AllHashTable</i>.</li></ol></div>
-<div id="gOff" class="guide" hidden><div class="off">⚠ Not connected to your Google Sheet.<br>Open this tool from the Sheet: [PS Tools] → Update PS list</div>
-<div class="offsub">Or use the manual route: upload your file below, then use the Settings.</div></div>
-<div class="row"><button class="p" id="go">Start matching</button></div>
-<details id="man"><summary>Manual route: upload a file instead (click to show)</summary>
-<ol style="margin:8px 0;padding-left:22px">
-<li>Upload the unmatched schools file here (from [PS Tools] → (Old method) Export unmatched schools).</li>
-<li>Click <b>Start matching</b> (above).</li>
-<li>Click <b>Download new mapping</b> (PS_Result.xlsx).</li>
-<li>In the Google Sheet: [PS Tools] → (Old method) Append new mapping to AllHashTable, and choose PS_Result.xlsx.</li></ol>
-<div class="row"><label id="flw">Unmatched schools file (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label><span id="dlslot"></span></div></details>
-<details id="set"><summary>Settings: Google Sheet (saved in this browser only)</summary><div class="row" style="margin-top:8px">
+<div class="sub">Everything runs in your browser. Your files are never uploaded anywhere.</div>
+<div class="card"><div class="row">
+<label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label>
+<button class="p" id="go">Start matching</button></div>
+<details><summary>Settings: Google Sheet (saved in this browser only)</summary><div class="row" style="margin-top:8px">
 <label>Google Sheet URL (must be viewable by anyone with the link)<br><input type="text" id="su" size="58" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
 <label>Or use a mapping file instead<br><input type="file" id="fm" accept=".xlsx,.xls"></label></div></details>
 <div id="msg"></div></div>
 <div id="app" hidden>
 <div class="card"><div class="row">
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
-<button id="sv" class="p">Save to AllHashTable</button><button id="dl1">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
+<button id="dl1" class="p">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
 <div id="stats" style="margin-top:10px"></div></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
@@ -120,15 +99,11 @@ function match(inp){const k=ek(inp);
 
 $("go").onclick=async()=>{
   const msg=$("msg");msg.textContent="";
-  const hasFile=!!$("fl").files[0],useApi=!!API;
-  if(!useApi&&!hasFile){msg.textContent="Please upload the student list, or open this tool from the Sheet menu [PS Tools] → Update PS list.";return}
+  if(!$("fl").files[0]){msg.textContent="Please choose the student list.";return}
   try{
     const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
     saveCfg();
-    if(useApi){msg.textContent="Loading from your Sheet…";const d=await api("getData");
-      if(!hasFile&&!d.schools.length){msg.textContent="All schools in AdmInfoDay(Responses) are already in AllHashTable.";return}
-      HASH=d.hash;SCH=d.sch;APIRAWS=d.schools}
-    else if($("fm").files[0]){const wm=XLSX.read(await $("fm").files[0].arrayBuffer());const a=wm.Sheets["AllHashTable"],s=wm.Sheets["香港小學名單"];
+    if($("fm").files[0]){const wm=XLSX.read(await $("fm").files[0].arrayBuffer());const a=wm.Sheets["AllHashTable"],s=wm.Sheets["香港小學名單"];
       if(!a||!s){msg.textContent="Sheets AllHashTable and 香港小學名單 were not found in the mapping workbook.";return}HASH=aoa(a);SCH=aoa(s)}
     else{msg.textContent="Reading Google Sheet…";HASH=await gs("AllHashTable");SCH=await gs("香港小學名單");
       if(!/input/i.test(HASH[0]?.[0]))throw new Error("AllHashTable did not load correctly (check the sheet name).");if(SCH.length<2)throw new Error("香港小學名單 did not load correctly.")}
@@ -141,9 +116,8 @@ $("go").onclick=async()=>{
     CANON=[...cs];
     IDX=CANON.map(mkIdx);
     $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("");
-    if(!hasFile)RAWS=APIRAWS;
-    else{const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
-      RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim())}
+    const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
+    RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim());
     const cnt=new Map();RAWS.forEach(r=>{if(r)cnt.set(ek(r),{input:r,n:(cnt.get(ek(r))?.n||0)+1})});
     ROWS=[];NEW=[];const items=[...cnt.values()];
     for(let i=0;i<items.length;i++){
@@ -151,9 +125,7 @@ $("go").onclick=async()=>{
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
     msg.textContent="";$("app").hidden=false;$("call").hidden=false;render();
-  }catch(e){msg.textContent=useApi
-    ?"Error: "+e.message+" — cannot reach the Web App. Check that the deployment is active, access is Anyone, and the latest version is deployed, then reopen from [PS Tools] → Update PS list."
-    :"Error: "+e.message+" — if the Google Sheet could not be read, make sure it is shared as \"Anyone with the link can view\", or choose a mapping file in Settings."}
+  }catch(e){msg.textContent="Error: "+e.message+" — if the Google Sheet could not be read, make sure it is shared as \"Anyone with the link can view\", or choose a mapping file in Settings."}
 };
 const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 function render(){
@@ -194,25 +166,6 @@ async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"}
   RULES=new Function(s+"\nreturn AISearch;")();
   document.querySelector(".sub").textContent+=" Rules file loaded."}catch(e){console.warn("rules.js not used:",e)}}
 loadRules();
-// ===== Connection to the Google Sheet (Apps Script Web App) =====
-let API=null,TOK="",APIRAWS=[];
-try{const h=new URLSearchParams(location.hash.slice(1));
-  if(h.get("api")){localStorage.setItem("ps_api",h.get("api"));localStorage.setItem("ps_tok",h.get("token")||"");history.replaceState(null,"",location.pathname+location.search)}
-  API=localStorage.getItem("ps_api");TOK=localStorage.getItem("ps_tok")||""}catch(e){}
-// Connected: show the guide, hide the file chooser and Settings. Not connected: red warning, show chooser and Settings.
-$("gOn").hidden=!API;$("gOff").hidden=!!API;
-$("set").hidden=!!API;$("sv").hidden=!API;
-if(API){$("dl2").hidden=true;$("dlslot").appendChild($("dl1"))}else $("man").open=true;
-async function api(action,data){const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,token:TOK,...data})});
-  const j=await r.json();if(!j.ok)throw new Error(j.error||"Request failed");return j}
-$("sv").onclick=async()=>{const rows=newRows();
-  if(!API){alert("Not connected. Open this page from the Sheet menu [PS Tools] → Update PS list.");return}
-  if(!rows.length){alert("Nothing to save yet. Confirm some rows first.");return}
-  try{const c=await api("check",{rows});
-    if(!c.add){alert("Nothing new to save ("+c.same+" already in AllHashTable).");return}
-    if(!confirm("Save "+c.add+" new rows to AllHashTable?"+(c.diff?"\n"+c.diff+" already exist with a different name (left unchanged).":"")))return;
-    const r=await api("append",{rows});alert(r.added+" rows added to AllHashTable.")
-  }catch(e){alert("Error: "+e.message)}};
 const sid=()=>(($("su").value.match(/\/d\/([\w-]+)/)||[])[1]||"");
 async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Google Sheet URL in Settings, or choose a mapping file.");
   const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}${bust?"&_="+Date.now():""}`);
@@ -230,7 +183,7 @@ $("call").onclick=()=>{const t=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||
   t.forEach(confirmRow);render()};
 $("top").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 function save(wb,name){XLSX.writeFile(wb,name)}
-$("dl1").onclick=()=>{if(!ROWS){alert("Click Start matching first.");return}const by=new Map(ROWS.map(r=>[ek(r.input),r]));
+$("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
   const out=[["Input","Standard name","Status","International","Mainland","Overseas"]];
   RAWS.forEach(x=>{const r=by.get(ek(x));if(!r){out.push([x,"","Blank","","",""]);return}
     const ok=r.st!=="review";out.push([x,ok?r.u:"",({auto:"Auto",confirmed:"Confirmed",skipped:"Skipped",blank:"Blank"})[r.st]||"Unconfirmed",r.f.i?"Y":"",r.f.m?"Y":"",r.f.o?"Y":""])});
