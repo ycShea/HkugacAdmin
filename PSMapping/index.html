@@ -10,11 +10,11 @@ body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.4 sy
 h1{font-size:20px;margin:0 0 4px}.sub{opacity:.7;margin-bottom:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-button,select,input[type=text]{font:inherit;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
+button,select,input[type=text],input[type=password]{font:inherit;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
 button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
 .wrap{overflow-x:auto}.wrap{overflow-x:auto}.ac{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.r{display:flex;gap:6px;align-items:center}.r a{display:flex;text-decoration:none}.r a button{text-decoration:none}.ac button{height:30px;box-sizing:border-box;padding:0 10px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.sb{display:flex;flex-direction:column;gap:6px;margin-top:8px;align-items:flex-start}.sb button{white-space:nowrap}
 table{border-collapse:collapse;width:100%;min-width:1100px}
-th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}details.card{margin-top:0}details.card ol{margin:8px 0 0;padding-left:22px}details.card li{margin:4px 0}summary{cursor:pointer}
+th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}.note{opacity:.75;margin:8px 0 0;font-size:13px}details.card{margin-top:0}details.card ol{margin:8px 0 0;padding-left:22px}details.card li{margin:4px 0}summary{cursor:pointer}
 td input[type=text]{width:100%;box-sizing:border-box}
 .chip{font-size:12px;padding:2px 6px;margin:3px 3px 0 0;border-radius:12px}
 .st{padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap}
@@ -26,24 +26,27 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <div class="sub">Everything runs in your browser. Your files are never uploaded anywhere.</div>
 <details class="card" open><summary><b>How to use</b></summary>
 <ol>
-<li>In the Google Sheet, click <b>[PS Tools] → Export unmatched schools</b> and download the CSV.</li>
-<li>Open <b>Settings</b> below and paste the Google Sheet URL (only needed once). Choose the CSV under <b>Student list</b> and click <b>Start matching</b>.</li>
-<li>Check each row: click <b>✓ Confirm</b>, or <b>✔ Confirm all mapped</b> (bottom right). Use <b>🔍 Google</b> if unsure, and <b>⏭ Skip</b> to leave a row out.</li>
-<li>Click <b>Download new mapping</b>. This saves <b>PS_Result.xlsx</b>.</li>
-<li>Go back to the Google Sheet and click <b>[PS Tools] → Append new mapping to AllHashTable</b>, then choose <b>PS_Result.xlsx</b>. The new rows are added at the bottom of AllHashTable.</li>
-</ol></details>
-<div class="card"><div class="row">
-<label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label>
-<button class="p" id="go">Start matching</button></div>
-<details><summary>Settings: Google Sheet (saved in this browser only)</summary><div class="row" style="margin-top:8px">
-<label>Google Sheet URL (must be viewable by anyone with the link)<br><input type="text" id="su" size="58" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
-<label>Or use a mapping file instead<br><input type="file" id="fm" accept=".xlsx,.xls"></label></div></details>
+<li>Click <b>Start matching</b>. The tool loads the schools in <b>AdmInfoDay(Responses)</b> that are not yet in <b>AllHashTable</b>.</li>
+<li>Check each row: click <b>✓ Confirm</b>, or <b>✔ Confirm all mapped</b> (bottom right). Use <b>🔍 Google</b> if unsure, <b>⏭ Skip</b> to leave a row out.</li>
+<li>Click <b>Save to AllHashTable</b>.</li>
+<li>Go back to the Google Sheet. The new rows are at the bottom of <b>AllHashTable</b>.</li>
+</ol>
+<p class="note">First time, or after making a copy of the spreadsheet: open <b>Settings</b> below and paste the web app URL and token of that spreadsheet.</p></details>
+<div class="card"><div class="row"><button class="p" id="go">Start matching</button></div>
+<details id="set"><summary>Settings: Google Sheet (saved in this browser only)</summary>
+<div class="row" style="margin-top:8px">
+<label>Web app URL of this spreadsheet (ends with /exec)<br><input type="text" id="au" size="64" placeholder="https://script.google.com/macros/s/.../exec"></label>
+<label>Token<br><input type="password" id="tk" size="18"></label></div>
+<p class="note">In the Google Sheet, click <b>[PS Tools] → Show web app URL</b> to get the URL. Every copy of the spreadsheet has its own URL, so pasting a different URL here switches to that copy.</p></details>
+<details id="man"><summary>Manual route: upload a file instead (click to show)</summary>
+<div class="row" style="margin-top:8px"><label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label><button id="gof">Start matching (file)</button></div>
+<p class="note">The standard names still come from the spreadsheet above. When you use this route, <b>Download new mapping</b> appears next to the other buttons.</p></details>
 <div id="msg"></div></div>
 <div id="app" hidden>
 <div class="card"><div class="row">
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
-<button id="dl1" class="p">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
-<div id="stats" style="margin-top:10px"></div></div>
+<button id="sv" class="p">Save to AllHashTable</button><button id="dl2">Download updated AllHashTable</button><button id="dl1" hidden>Download new mapping</button></div>
+<div id="stats" style="margin-top:10px"></div><div id="sm" style="margin-top:6px"></div></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
 <div id="fab"><button id="call" class="p" hidden title="Confirm every Review row that has a suggested name">✔ Confirm all mapped</button><button id="top" class="p" title="Back to top">↑ Top</button></div>
@@ -105,36 +108,59 @@ function match(inp){const k=ek(inp);
   if(rr.names.length){sg=[...rr.names.map(n=>({n,s:1,rule:true})),...sg.filter(x=>!rr.names.includes(x.n))].slice(0,3);return{u:rr.exact?rr.names[0]:"",st:"review",sg}}
   return{u:sg.length&&sg[0].s>=.75?sg[0].n:"",st:"review",sg}}
 
-$("go").onclick=async()=>{
-  const msg=$("msg");msg.textContent="";
-  if(!$("fl").files[0]){msg.textContent="Please choose the student list.";return}
+let MODE="auto";
+const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+async function callApp(action,extra){
+  const url=$("au").value.trim(),token=$("tk").value;
+  if(!url||!token){$("set").open=true;throw new Error("Please paste the web app URL and the token in Settings first.")}
+  if(!/\/exec(\?|$)/.test(url)){$("set").open=true;throw new Error("The web app URL must end with /exec (copy it from [PS Tools] → Show web app URL).")}
+  let res,j;
+  try{res=await fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action,token,...extra})})}
+  catch(e){$("set").open=true;throw new Error("Cannot reach the web app. Check your internet connection and that the URL is correct.")}
+  try{j=await res.json()}
+  catch(e){$("set").open=true;throw new Error("The web app did not return data (for example \"Unauthorized\"). In the Google Sheet, deploy it as a Web app with Execute as: Me and Who has access: Anyone, deploy the latest version, then paste the URL of this copy of the spreadsheet here.")}
+  if(!j.ok)throw new Error(j.error==="bad token"?"Wrong token.":"Web app: "+j.error);
+  return j}
+function buildMaps(){
+  HE=new Map();HN=new Map();AB=new Map();DM=new Map();TY=new Map();
+  HASH.slice(1).forEach(([i0,u0])=>{if(!i0||!u0)return;const i=String(i0).trim(),u=String(u0).trim();HE.set(ek(i),u);const k=sq(i);if(!HN.has(k))HN.set(k,new Set());HN.get(k).add(u)});
+  const cs=new Set();
+  SCH.slice(1).forEach(([n0,ab,d,ty])=>{if(!n0)return;const n=String(n0).trim();cs.add(n);DM.set(n,d||"");TY.set(n,String(ty||"").trim().toLowerCase());
+    if(ab){const k=ek(ab);if(!AB.has(k))AB.set(k,new Set());AB.get(k).add(n)}});
+  HASH.slice(1).forEach(([,u])=>{if(u)cs.add(String(u).trim())});
+  CANON=[...cs];IDX=CANON.map(mkIdx);
+  $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("")}
+async function start(mode){
+  const msg=$("msg");msg.textContent="";$("sm").textContent="";MODE=mode;
   try{
-    const aoa=ws=>XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-    saveCfg();
-    if($("fm").files[0]){const wm=XLSX.read(await $("fm").files[0].arrayBuffer());const a=wm.Sheets["AllHashTable"],s=wm.Sheets["香港小學名單"];
-      if(!a||!s){msg.textContent="Sheets AllHashTable and 香港小學名單 were not found in the mapping workbook.";return}HASH=aoa(a);SCH=aoa(s)}
-    else{msg.textContent="Reading Google Sheet…";HASH=await gs("AllHashTable");SCH=await gs("香港小學名單");
-      if(!/input/i.test(HASH[0]?.[0]))throw new Error("AllHashTable did not load correctly (check the sheet name).");if(SCH.length<2)throw new Error("香港小學名單 did not load correctly.")}
-    HE=new Map();HN=new Map();AB=new Map();DM=new Map();TY=new Map();
-    HASH.slice(1).forEach(([i0,u0])=>{if(!i0||!u0)return;const i=String(i0).trim(),u=String(u0).trim();HE.set(ek(i),u);const k=sq(i);if(!HN.has(k))HN.set(k,new Set());HN.get(k).add(u)});
-    const cs=new Set();
-    SCH.slice(1).forEach(([n0,ab,d,ty])=>{if(!n0)return;const n=String(n0).trim();cs.add(n);DM.set(n,d||"");TY.set(n,String(ty||"").trim().toLowerCase());
-      if(ab){const k=ek(ab);if(!AB.has(k))AB.set(k,new Set());AB.get(k).add(n)}});
-    HASH.slice(1).forEach(([,u])=>{if(u)cs.add(String(u).trim())});
-    CANON=[...cs];
-    IDX=CANON.map(mkIdx);
-    $("dl").innerHTML=CANON.map(c=>`<option value="${esc(c)}">`).join("");
-    const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
-    RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim());
-    const cnt=new Map();RAWS.forEach(r=>{if(r)cnt.set(ek(r),{input:r,n:(cnt.get(ek(r))?.n||0)+1})});
-    ROWS=[];NEW=[];const items=[...cnt.values()];
+    if(mode==="manual"&&!$("fl").files[0]){msg.textContent="Please choose the student list.";$("man").open=true;return}
+    saveCfg();msg.textContent="Loading from the Google Sheet…";
+    const d=await callApp("load");
+    HASH=[["Input","Unified"],...d.hash];SCH=[["學校名稱","簡稱","地區","類型"],...d.schools];
+    buildMaps();let items;
+    if(mode==="manual"){
+      const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
+      RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim());
+      const cnt=new Map();RAWS.forEach(r=>{if(r)cnt.set(ek(r),{input:r,n:(cnt.get(ek(r))?.n||0)+1})});items=[...cnt.values()]}
+    else{RAWS=d.unmatched.map(x=>x[0]);items=d.unmatched.map(([input,n])=>({input,n}))}
+    if(!items.length){msg.textContent="Nothing to match: every school in AdmInfoDay(Responses) is already in AllHashTable.";$("app").hidden=true;$("call").hidden=true;return}
+    ROWS=[];NEW=[];
     for(let i=0;i<items.length;i++){
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
-    msg.textContent="";$("app").hidden=false;$("call").hidden=false;render();
-  }catch(e){msg.textContent="Error: "+e.message+" — if the Google Sheet could not be read, make sure it is shared as \"Anyone with the link can view\", or choose a mapping file in Settings."}
-};
+    msg.textContent="";$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
+  }catch(e){msg.textContent="Error: "+e.message}}
+$("go").onclick=()=>start("auto");
+$("gof").onclick=()=>start("manual");
+$("sv").onclick=async()=>{const sm=$("sm"),rows=newRows();
+  if(!rows.length){sm.textContent="Nothing new to save yet. Confirm some rows first.";return}
+  if(!confirm(`Save ${rows.length} new mapping(s) to AllHashTable?`))return;
+  $("sv").disabled=true;sm.textContent="Saving…";
+  try{const j=await callApp("save",{rows});
+    sm.textContent=`Saved: ${j.added} added, ${j.same} already there, ${j.diff} already there with a different name (left unchanged)${j.dup?`, ${j.dup} repeated`:""}. The new rows are at the bottom of AllHashTable.`}
+  catch(e){sm.textContent="Error: "+e.message+" (If the rows were saved anyway, saving again is safe: duplicates are skipped.)"}
+  $("sv").disabled=false};
 const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 function render(){
   const f=$("flt").value,c={auto:0,confirmed:0,review:0,skipped:0,blank:0};ROWS.forEach(r=>c[r.st]++);
@@ -174,13 +200,8 @@ async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"}
   RULES=new Function(s+"\nreturn AISearch;")();
   document.querySelector(".sub").textContent+=" Rules file loaded."}catch(e){console.warn("rules.js not used:",e)}}
 loadRules();
-const sid=()=>(($("su").value.match(/\/d\/([\w-]+)/)||[])[1]||"");
-async function gs(name,bust){const id=sid();if(!id)throw new Error("Enter the Google Sheet URL in Settings, or choose a mapping file.");
-  const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}${bust?"&_="+Date.now():""}`);
-  if(!r.ok)throw new Error("Cannot read sheet "+name+" (HTTP "+r.status+")");
-  const w=XLSX.read(await r.text(),{type:"string",raw:true});return XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1,defval:""})}
-function saveCfg(){try{localStorage.setItem("ps_su",$("su").value.trim())}catch(e){}}
-try{$("su").value=localStorage.getItem("ps_su")||""}catch(e){}
+function saveCfg(){try{localStorage.setItem("ps_au",$("au").value.trim());localStorage.setItem("ps_tk",$("tk").value)}catch(e){}}
+try{$("au").value=localStorage.getItem("ps_au")||"";$("tk").value=localStorage.getItem("ps_tk")||""}catch(e){}
 function updCall(){const n=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!n;$("call").textContent=`✔ Confirm all mapped (${n})`}
 const newRows=()=>[...NEW,...ROWS.filter(r=>r.st==="auto"&&!HE.has(ek(r.input))).map(r=>[r.input,r.u])];
 function confirmRow(r){const v=((r.draft??r.u)||"").trim();if(!v)return;r.u=v;r.st="confirmed";
