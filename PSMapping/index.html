@@ -139,6 +139,7 @@ async function start(mode){
     if(mode==="manual"&&!$("fl").files[0]){msg.textContent="Please choose the student list.";$("man").open=true;return}
     saveCfg();msg.textContent="Loading from the Google Sheet…";
     const d=await callApp("load");
+    $("set").open=false;chkSet();
     HASH=[["Input","Unified"],...d.hash];SCH=[["學校名稱","簡稱","地區","類型"],...d.schools];
     buildMaps();let items;
     if(mode==="manual"){
@@ -205,6 +206,8 @@ async function loadRules(){try{const r=await fetch("rules.js",{cache:"no-store"}
 loadRules();
 function saveCfg(){try{localStorage.setItem("ps_au",$("au").value.trim());localStorage.setItem("ps_tk",$("tk").value)}catch(e){}}
 try{$("au").value=localStorage.getItem("ps_au")||"";$("tk").value=localStorage.getItem("ps_tk")||""}catch(e){}
+function chkSet(){$("set").hidden=!!($("au").value.trim()&&$("tk").value)}
+chkSet();
 function updCall(){const n=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||"").trim()).length;$("call").hidden=!n;$("call").textContent=`✔ Confirm all mapped (${n})`}
 const newRows=()=>[...NEW,...ROWS.filter(r=>r.st==="auto"&&!HE.has(ek(r.input))).map(r=>[r.input,r.u])];
 function confirmRow(r){const v=((r.draft??r.u)||"").trim();if(!v)return;r.u=v;r.st="confirmed";
