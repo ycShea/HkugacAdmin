@@ -1,61 +1,89 @@
 # PS Mapping
 
+🔗 **[PS Mapping (Most Updated)](https://docs.google.com/spreadsheets/d/1uz5Um7unTOxC40xlvNtxHZWX2y34kfBo-MQDKGq28TA/edit?gid=976826844#gid=976826844)**
+
 🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/PSMapping/)**
 
-🔗 **[PS Mapping (Most Updated, NEW method)](https://docs.google.com/spreadsheets/d/1-tcFI4oAFt4nPBKSfCQcwHwCGd8QQJnW8eFmSBeVYjc/edit?gid=450436726#gid=450436726)**
+A small web tool that turns the primary school names typed by families (spelling mistakes, abbreviations, Chinese or English) into one **standard school name**. It reads the mapping table from the Google Sheet, helps you decide the unclear cases, and saves the new mappings back to the sheet.
 
-A small web tool that turns the primary school names typed by families (spelling mistakes, abbreviations, Chinese or English) into one **standard school name**. It is connected to a Google Sheet: it loads the schools that are not yet mapped, helps you decide the unclear cases, and saves the new mappings back to the sheet with one click.
+## How to use
+
+1. Click **Start matching**. The tool loads the schools in `AdmInfoDay(Responses)` that are not yet in `AllHashTable`.
+2. Check each row: click **✓ Confirm**, or **✔ Confirm all mapped** (bottom right). Use **🔍 Google** if unsure, **⏭ Skip** to leave a row out, and **🚫 Not a School** for entries such as `N/A`.
+3. Click **Save to AllHashTable**.
+4. Go back to the Google Sheet. The new rows are at the bottom of `AllHashTable` (and `Not a School`).
+
+The first time, or after making a copy of the spreadsheet, you must set the Web app URL and the Token once. See [First-time setup](#first-time-setup-once-for-each-copy-of-the-spreadsheet).
 
 ## What is in this repository
 
-| File | What it is |
-|---|---|
-| `index.html` | The web tool (matching runs in the browser) |
-| `rules.js` | *Optional.* Your `AISearch` function. If it is in the same folder, the tool uses it as an extra matching step (see [Rules](#rules-optional-rulesjs)) |
-| `AppsScript.gs` | Code for the Google Sheet: the `[PS Tools]` menu and the Web App that the tool talks to |
-| `Upload.html` | The upload box used by the old menu item *Append new mapping to AllHashTable* (add it to Apps Script as an HTML file named `Upload`) |
-| `README.md` | This guide |
+| File | Where it goes | What it is |
+|---|---|---|
+| `index.html` | GitHub Pages (or open it from your computer) | The tool |
+| `rules.js` | Same folder as `index.html` (optional) | Your `AISearch` rules, used as an extra matching step |
+| `AppsScript.gs` | Google Sheet > Extensions > Apps Script | The `[PS Tools]` menu and the web app |
+| `WebAppUrl.html` | Apps Script, HTML file named exactly `WebAppUrl` | The dialog behind **Show Web app URL** |
+| `Upload.html` | Apps Script, HTML file named exactly `Upload` | The upload box of the manual route |
+| `README.md` | Repository | This guide |
 
 ## The Google Sheet
 
 | Sheet | Content |
 |---|---|
-| `AllHashTable` | Column A **Input** (a spelling seen before), column B **Unified** (the standard name), column C the type (your VLOOKUP, maintained in the sheet) |
-| `香港小學名單` | The list of standard names. A = name, B = abbreviation, C = district, **D = type: `HK`, `International`, `China` or `Oversea`** |
-| `AdmInfoDay(Responses)` | The form responses; column A holds the school name typed by the family |
+| `AllHashTable` | **A** = Input (a spelling seen before), **B** = Unified (the standard name), **C** = type (your VLOOKUP; the tool never touches it) |
+| `香港小學名單` | The standard names. **A** = name, **B** = abbreviation, **C** = district, **D** = type: `HK`, `International`, `China` or `Oversea` |
+| `AdmInfoDay(Responses)` | The form responses. Column A holds the school name typed by the family |
+| `Not a School` | Names that are not a school (`N/A`, `1`, `Name of Child` ...). Column A, from row 2 |
 
-The sheet can stay **private**. The tool reads and writes it only through the Web App (see [Setup](#setup)).
+The sheet names and the column of the school name are settings at the top of `AppsScript.gs`.
 
-## Typical workflow
+## How it works
 
-1. In the Google Sheet, click **[PS Tools] → Update PS list**, then click **Open PS Mapping tool**. (**Copy link** copies the same link if you prefer to paste it in another browser.)
-2. In the tool, click **Start matching**. It loads the schools in `AdmInfoDay(Responses)` that are not yet in `AllHashTable`.
-3. Go through the rows (see below). Click **✓ Confirm** on each row, or **✔ Confirm all mapped**.
-4. Click **Save to AllHashTable**. The tool shows how many rows will be added and asks you to confirm.
-5. Go back to the Google Sheet. The new rows are at the bottom of `AllHashTable`.
+- The tool (on GitHub Pages) sends requests to a **web app** that lives inside your Google Sheet. Each request carries a secret **Token**.
+- The sheet stays **private**. The web app sends back only the school names to match, the mapping table, the standard school list and the `Not a School` names. Nothing else from the responses sheet leaves the spreadsheet.
+- Every copy of the spreadsheet has its own script, its own **Web app URL** and its own **Token**. Pasting a different URL in the tool's Settings switches to a different copy.
 
-The tool remembers the connection in your browser, so later you can open the plain tool link. A new browser, a new browser profile or cleared site data needs the link from **Update PS list** once.
+## First-time setup (once for each copy of the spreadsheet)
 
-If the page shows a red "Not connected" message, open it from the Sheet menu as in step 1.
+1. Open the Google Sheet and go to **Extensions > Apps Script**.
+2. Paste `AppsScript.gs`, then add two HTML files (**+ > HTML**) named exactly `Upload` and `WebAppUrl`, and paste `Upload.html` and `WebAppUrl.html` into them. (A copy of the spreadsheet already contains them.)
+3. Reload the Google Sheet. A menu **[PS Tools]** appears. The first time, Google asks you to approve permissions.
+4. Click **[PS Tools] > Show Web app URL**. The dialog shows the steps, with pictures of the buttons to look for:
+   - **First time only:** Deploy > New deployment > Web app, Execute as **Me**, Who has access **Anyone**, Deploy, approve the permissions, then copy the **Web app URL**.
+   - **Get the URL again later:** Deploy > Manage deployments, then copy the URL.
+   - Paste the URL in the dialog and click **Save**. It must end with `/exec`. The school-domain forms (`/a/<domain>/...`) are converted automatically.
+5. In the same dialog, type a secret word (at least 6 characters) under **Token** and click **Set the token**. Write it down: it cannot be shown again.
+6. Open the **[Live Tool](https://ycshea.github.io/HkugacAdmin/PSMapping/)**, open **Settings: Google Sheet (saved in this browser only)**, paste the URL and the Token, and click **Start matching**.
 
-### Old manual route (still available)
+**Token.** It is one shared secret word, not a login for each person. Anyone who has the Web app URL and the Token can read the school names and add rows, so share it only with your team. To cut off access, click **Reset token** in the dialog and set a new one. Everyone then has to type the new Token in their own Settings.
 
-1. **[PS Tools] → Export unmatched schools** and download the CSV.
-2. Open the tool (not connected), choose the CSV, and enter the Google Sheet URL in **Settings** (the sheet must be shared as *Anyone with the link can view* for this route). Click **Start matching**.
-3. Click **Download new mapping** to get `PS_Result.xlsx`.
-4. In the Sheet: **[PS Tools] → Append new mapping to AllHashTable** and choose `PS_Result.xlsx`.
+**After changing the code** in Apps Script, deploy a new version with **Deploy > Manage deployments > pencil > New version**. Do not choose *New deployment*, because the URL would change.
+
+**A new copy of the spreadsheet** must be deployed again and needs its own Token. If **Show Web app URL** already says "Token: Set" and you did not set it, click **Reset token** and set your own.
+
+## The Settings box in the tool
+
+The line **Settings: Google Sheet (saved in this browser only)** is always on the page.
+
+| Situation | Settings |
+|---|---|
+| URL and Token are saved | Folded |
+| URL or Token is missing | Open |
+| **Start matching** fails (wrong URL, wrong Token, no connection) | Opens, with the error |
+| The web app answers but the sheet setup is wrong (for example a renamed tab) | Stays folded, with the error |
+| Everything works | Folds |
 
 ## How the tool matches
 
-Each name goes through these steps, in this order, and stops at the first one that finds it:
+Each name goes through these steps and stops at the first one that finds it:
 
 1. **Exact** match in `AllHashTable` (ignoring capitals, spaces and full-width characters).
-2. **Normalised** match in `AllHashTable` (also ignoring punctuation, simplified vs traditional Chinese, and common words such as *Primary School*; typos in those words, such as *Schiol*, are fixed).
+2. **Normalised** match in `AllHashTable` (also ignoring punctuation, simplified vs traditional Chinese and common words such as *Primary School*; typos in those words, such as *Schiol*, are fixed).
 3. **Abbreviation** from column B of `香港小學名單`.
 4. **Rules** from `rules.js`, if present.
-5. **Fuzzy matching** against all standard names: similarity of the name, matching of words, and initials (for example `HPCC Hoi Ping` finds *Hoi Ping Chamber Of Commerce*).
+5. **Fuzzy matching** against all standard names: similarity of the name, matching of words, and initials (`HPCC Hoi Ping` finds *Hoi Ping Chamber Of Commerce*).
 
-Steps 1 and 2 are shown as **Auto 100%**. Everything else is a suggestion that you confirm.
+Steps 1 and 2 are shown as **Auto 100%**. Everything else is a suggestion for you to confirm. Names in `Not a School` are left out of the list from the start.
 
 ## Using the tool
 
@@ -63,95 +91,84 @@ Steps 1 and 2 are shown as **Auto 100%**. Everything else is a suggestion that y
 
 | Status | Meaning |
 |---|---|
-| **Auto 100%** | Found in `AllHashTable` (step 1 or 2). Nothing to do. |
-| **Review** | A suggestion, or none. Up to three suggestions are shown with a score, and the best one is pre-filled if it is close enough. Rows with a pre-filled name are listed first, strongest first. |
-| **Confirmed** | You accepted the name. |
-| **Skipped** | You skipped the record. |
+| **Auto 100%** | Found in `AllHashTable`. Nothing to do |
+| **Review** | A suggestion or none. Up to three suggestions are shown with a score and the best one is pre-filled if it is close enough. Rows with a pre-filled name come first, strongest first |
+| **Confirmed** | You accepted the name |
+| **Skipped** | You skipped the record |
+| **Not a School** | You marked it as not a school name |
 
-A summary line below the toolbar shows how many rows are in each status.
+A summary line below the buttons shows how many rows are in each status. Use **Show** to list only the rows that need review, or all rows.
 
-**Buttons on a Review row**
+**Buttons on a Review row** (hover over a button to see what it does)
 
 ```
-✓ Confirm   🔍 Google
-⏭ Skip
-⧉ Copy      ✕ Clear
+✓ Confirm (blue)           🔍 Google
+🚫 Not a School (orange)   ⏭ Skip
+⧉ Copy                     ✕ Clear
 ```
 
 | Button | What it does |
 |---|---|
 | **✓ Confirm** | Accepts the name in the box and adds the mapping to the new mappings |
 | **🔍 Google** | Opens a Google search for the input in a new tab |
-| **⏭ Skip** | Skips this record. The standard name in the result is the input itself, and the row leaves the Review list. It is **not** added to the new mappings. |
+| **🚫 Not a School** | The input is not a school name. It is saved to `Not a School` and not asked again |
+| **⏭ Skip** | Skip for now. Nothing is saved |
 | **⧉ Copy** | Copies the input into the name box so you can edit it and use type-to-search |
 | **✕ Clear** | Empties the name box |
-| **Undo** | Shown on finished rows; puts the row back to Review |
-| **✔ Confirm all mapped (N)** | Floating button. Confirms every Review row that has a name in its box. It disappears when there are none. |
+| **Undo** | Shown on finished rows. Puts the row back to Review |
+| **✔ Confirm all mapped (N)** | Floating button. Confirms every Review row that has a name in its box. It disappears when there are none |
 | **↑ Top** | Floating button. Scrolls back to the top |
 
-The **Standard name** box has type-to-search over all standard names. Click a suggestion button under it to fill the box. A suggestion marked *rule* came from `rules.js`.
+The **Standard name** box has type-to-search over all standard names. Click a suggestion under it to fill the box; a suggestion marked *rule* came from `rules.js`.
 
-**Ticks.** *International*, *Mainland* and *Overseas* come from column D of `香港小學名單`: `International` ticks International, `China` ticks Mainland, `Oversea` ticks Overseas, and `HK` ticks nothing. For names that are not in the list, the tool guesses from keywords, so please check those.
+The three tick columns (*International*, *Mainland*, *Overseas*) come from column D of `香港小學名單` and are only there for your reference. They are not saved. The type in `AllHashTable` comes from your VLOOKUP.
 
-**Saving and downloads**
+**Buttons above the table**
 
 | Button | What it does |
 |---|---|
-| **Save to AllHashTable** | Appends the new mappings to `AllHashTable` through the Web App. Needs the connection. Existing entries are never overwritten. |
-| **Download new mapping** | `PS_Result.xlsx`: sheet **New mappings** (`Input` \| `Standard name`) first, then sheet **Result** (every row of your list with its standard name, status and the three ticks) |
-| **Download updated AllHashTable** | `PS_Mapping_updated.xlsx`: `AllHashTable` with the new mappings added, plus `香港小學名單` |
+| **Save to AllHashTable** | Writes the confirmed mappings to `AllHashTable` and the `Not a School` names to the sheet `Not a School`. Existing entries are never overwritten, and a name already in `AllHashTable` is not added to `Not a School`. Shows how many rows were added, already there, or already there with a different name |
+| **Download new mapping** | Downloads `PS_Result.xlsx`: only the **new** rows, in two sheets: `AllHashTable` (`Input` \| `Standard name`) and `Not a School` (`Input`) |
+| **Download updated AllHashTable** | Downloads `PS_Mapping_updated.xlsx`: a full copy with `AllHashTable` (existing and new rows), `香港小學名單` and `Not a School` |
 
-*New mappings* contains the rows you **confirmed**, plus the Auto rows whose exact spelling was not yet in `AllHashTable`. **Skipped** rows are not added. All names are trimmed of leading and trailing spaces.
+The new mappings are the rows you confirmed, plus the Auto rows whose exact spelling was not yet in `AllHashTable`. All names are trimmed of leading and trailing spaces.
 
-> Progress is not saved. Click **Save to AllHashTable** (or download your files) before closing the page.
+> Progress is not saved. Click **Save to AllHashTable** or download a file before you close the page.
 
-## Rules (optional: `rules.js`)
+## Manual route (upload a file)
 
-Put your `AISearch` function in a file called `rules.js` next to `index.html`. When the page loads it, the top of the page shows "Rules file loaded.".
+Open **Manual route: upload a file instead (click to show)** in the tool. It uses the same matching, the same Settings and the same buttons. Only the list of names comes from a file.
 
-- A rule hit appears as a **100% "rule"** suggestion and is pre-filled, but stays in **Review**, so you still confirm it (or use **✔ Confirm all mapped**).
-- If a rule returns a `? ...` list, all the choices are shown and none is pre-filled.
-- If a rule returns a name that is not in your standard list, it is only used when it closely matches a listed name.
-- Loading adjusts the file automatically: Latin keywords of **4 letters or fewer must match a whole word** (so `SH` no longer matches *Shek Kip Mei*), the `##` prefix is removed, the call to `lookupFromAllHashTable` is skipped (the page already does the lookup), and a few known mistakes are corrected (`SKHSJPS`, `HKMLCPS` and the *Kei Wan* brackets).
+1. In the Google Sheet, click **[PS Tools] > (Manual download) Export unmatched schools** and click **Download CSV**. The list leaves out the names in `Not a School`.
+2. In the tool, choose the file and click **Start matching (file)**. Names already in `Not a School` are left out, and a line tells you how many.
+3. Check the rows. Then either click **Save to AllHashTable**, or click **Download new mapping**.
+4. If you downloaded the file, click **[PS Tools] > (Manual upload) Append new mapping to AllHashTable** (or Step 3 of the Export dialog) and choose `PS_Result.xlsx`. The box checks the file and tells you how many rows are new, already there, already there with a different name, or repeated, for both sheets, before anything is written. Uploading the same file twice adds nothing.
 
 ## Google Sheet menu: `[PS Tools]`
 
 | Item | What it does |
 |---|---|
-| **Update PS list** | Shows a link that opens the tool already connected to this Sheet, and a **Copy link** button. Creates the access token automatically the first time. |
-| **Export unmatched schools** | *(old route)* Pop-up with 3 steps: download a CSV of the unique schools in `AdmInfoDay(Responses)` that are not in `AllHashTable`; open the tool and upload that CSV; append the result |
-| **Append new mapping to AllHashTable** | *(old route)* You choose `PS_Result.xlsx`. It checks that the sheet **New mappings** exists with the headers `Input` \| `Standard name`, then shows how many rows are new, already there with the same name, already there with a **different** name, or repeated in the file. It appends only the new ones. A second upload of the same file adds nothing. |
-| **Reset access token** | Replaces the access token. All saved links stop working. Use it if the tool link was shared by mistake, then open **Update PS list** again. |
-| **Help** | Short guide and a link to this page |
+| **Show Web app URL** | The dialog for the Web app URL and the Token: a big link to the tool, the saved URL with **Copy URL** and **Change URL**, **How to get the Web app URL**, and the Token with **Set the token** and **Reset token** |
+| **(Manual download) Export unmatched schools** | A dialog with three steps and a **Download CSV** button |
+| **(Manual upload) Append new mapping to AllHashTable** | Appends `PS_Result.xlsx` to `AllHashTable` and `Not a School` |
+| **Help** | A short guide and a link to this page |
 
-Existing entries are never overwritten. Only columns **A and B** are written, below the last row that has something in column A, and **column C (your VLOOKUP) is never touched**.
+Only columns **A and B** of `AllHashTable` (and column **A** of `Not a School`) are written, below the last row that has something in column A. Column C (your VLOOKUP) is never touched.
 
-## Setup
+## Rules (optional: `rules.js`)
 
-**The tool (GitHub Pages)**
-1. Upload `index.html` (and `rules.js` if you use it) to the repository.
-2. In **Settings → Pages**, publish the branch.
+Put your `AISearch` function in a file called `rules.js` next to `index.html`. When the page loads it, the top of the page shows "Rules file loaded.".
 
-**The sheet code (Apps Script), once per spreadsheet**
-1. In the Google Sheet, open **Extensions → Apps Script**.
-2. Paste `AppsScript.gs` into the code file.
-3. Add an HTML file named exactly **Upload** (**+ → HTML**) and paste `Upload.html` into it.
-4. Check the settings at the top of `AppsScript.gs`: `SRC_SHEET`, `SRC_COL` (column of the school name; A = 1), `HASH_SHEET`, `SCH_SHEET`, `TOOL_URL`, `HELP_URL`.
-5. **Deploy → New deployment → Web app**. Set **Execute as: Me** and **Who has access: Anyone**. Approve the permissions.
-6. Reload the Google Sheet and use **[PS Tools] → Update PS list**. The token is created automatically.
+- A rule hit appears as a **100% "rule"** suggestion and is pre-filled, but stays in **Review**, so you still confirm it.
+- If a rule returns a `? ...` list, all the choices are shown and none is pre-filled.
+- If a rule returns a name that is not in your standard list, it is only used when it closely matches a listed name.
+- When the file is loaded, Latin keywords of **4 letters or fewer must match a whole word**, the `##` prefix is removed, the call to `lookupFromAllHashTable` is skipped, and a few known mistakes are corrected (`SKHSJPS`, `HKMLCPS` and the *Kei Wan* brackets).
+- `rules.js` may not load when `index.html` is opened from a folder on your computer, because browsers block it.
 
-**After changing the script later:** use **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**. This keeps the same URL. Do not create a new deployment each time, and archive old ones you no longer use.
+## Privacy
 
-**New copy of the spreadsheet (File → Make a copy):** the copy has its own script. Repeat the setup above, including the deployment. Script Properties (the token) are not copied.
-
-## Privacy and security
-
-- Matching runs in your browser. The student list is not uploaded to GitHub.
-- In connected mode the tool talks only to **your own Web App**, which reads and writes **your own Sheet**. The Sheet itself can stay private.
-- The Web App must be deployed with *Who has access: Anyone*, so a **secret token** protects it. Every request must carry the token, otherwise it is rejected (*Unauthorized*).
-- The token is stored in the Apps Script project (**Project Settings → Script Properties → `PS_TOKEN`**). It is **not** in this repository. Your browser keeps a copy (local storage for the tool site) after you open the link from **Update PS list**. A new browser or cleared site data needs the link once.
-- **Treat the link from *Update PS list* like a password.** If it is shared by mistake, use **[PS Tools] → Reset access token**.
-- The page is public, but it contains no data and no token.
+- The page is public, but it contains no data. The Web app URL and the Token are typed in Settings and stored only in your own browser.
+- The sheet is not shared. Only the web app, which needs the Token, can read it.
 - `rules.js` is public if it is in the repository, so keep only school names and keywords in it.
 - Do not put student files in this repository.
 
@@ -159,20 +176,15 @@ Existing entries are never overwritten. Only columns **A and B** are written, be
 
 | Problem | What to try |
 |---|---|
-| Red "Not connected" message | Open the tool from **[PS Tools] → Update PS list** |
-| *Failed to fetch* when connected | The Web App cannot be reached. Check **Manage deployments**: the deployment must be active, *Who has access* must be **Anyone**, and the latest version must be deployed. Then reopen the tool from **Update PS list** |
-| *Unauthorized* | The saved token is old (for example after **Reset access token**). Reopen the tool from **Update PS list** |
-| *All schools ... are already in AllHashTable* | Nothing new to map |
-| The old route cannot read the sheet | Share it as *Anyone with the link can view*, or choose a mapping file under **Settings** |
+| "Please enter the Web app URL and the Token below." | Open Settings and enter both |
+| "Cannot reach the web app" or "Unauthorized" | Check the URL ends with `/exec`. In Apps Script, deploy the web app with **Execute as: Me** and **Who has access: Anyone**, deploy the latest version, and paste the URL of **this** copy of the spreadsheet |
+| "Wrong token." | Type the Token again, or reset it in **Show Web app URL** and enter the new one in Settings |
+| "token not set in this spreadsheet" | Set a Token in **[PS Tools] > Show Web app URL** |
+| "Sheet not found" | Check the sheet names at the top of `AppsScript.gs` (`SRC_SHEET`, `HASH_SHEET`, `SCHOOL_SHEET`, `NOT_SCHOOL_SHEET`) |
+| Saving says the script is an older version | Paste the latest `AppsScript.gs` and deploy a new version |
+| "Nothing to match" | Every school in `AdmInfoDay(Responses)` is already in `AllHashTable` or `Not a School` |
 | The page looks old after an update | Hard refresh: **Ctrl+F5** (Windows) or **Cmd+Shift+R** (Mac) |
-| No "Rules file loaded." message | `rules.js` must be in the same folder as `index.html`. Open the browser console for details |
-| *Sheet "New mappings" was not found* | Use the `PS_Result.xlsx` downloaded with **Download new mapping** |
-| *Nothing to append* | Those mappings are already in `AllHashTable` |
+| The append box says "Sheet AllHashTable was not found" | Use the `PS_Result.xlsx` from **Download new mapping** |
+| "Nothing to append" | Those mappings and names are already in the sheets |
 | Ticks are wrong for a school | Set column D (`HK`, `International`, `China`, `Oversea`) for that school in `香港小學名單` |
-| A school never matches | Use **🔍 Google**, pick the correct name and **✓ Confirm**; it will match automatically next time |
-| New rows in `AllHashTable` have no type | Make sure your column C VLOOKUP covers the new rows |
-
-## Credits
-
-Code written by Claude Sonnet 5.5 (Anthropic), version 2026-11-10.
-Requested and maintained by <Ada@Claude / Primary School Mapping**>
+| A school never matches | Use **🔍 Google**, pick the correct name and **✓ Confirm**. It will match automatically next time |
