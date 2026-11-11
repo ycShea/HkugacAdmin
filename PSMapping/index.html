@@ -4,14 +4,14 @@
 <title>PS Name Unifier</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{color-scheme:light dark;--bg:#fafafa;--fg:#1d1d1f;--card:#fff;--bd:#d0d0d5;--ac:#2563eb;--ok:#d9f2df;--warn:#fff1c2;--bad:#fcd9d9;--ig:#fed7aa}
-@media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#f0f0f2;--card:#26262b;--bd:#46464e;--ac:#6ea0ff;--ok:#1f4a2c;--warn:#524512;--bad:#5a2323;--ig:#7c2d12}}
+:root{color-scheme:light dark;--bg:#fafafa;--fg:#1d1d1f;--card:#fff;--bd:#d0d0d5;--ac:#2563eb;--ok:#d9f2df;--warn:#fff1c2;--bad:#fcd9d9;--ig:#fed7aa;--pk:#ede7f6;--pkb:#b39ddb}
+@media(prefers-color-scheme:dark){:root{--bg:#18181b;--fg:#f0f0f2;--card:#26262b;--bd:#46464e;--ac:#6ea0ff;--ok:#1f4a2c;--warn:#524512;--bad:#5a2323;--ig:#7c2d12;--pk:#3b2f5c;--pkb:#7e69b0}}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,"Noto Sans TC",sans-serif}
 h1{font-size:20px;margin:0 0 4px}.sub{opacity:.7;margin-bottom:12px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:12px}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 button,select,input[type=text],input[type=password]{font:inherit;padding:5px 9px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg)}
-button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
+button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button.pk{background:var(--pk);border-color:var(--pkb)}button:disabled{opacity:.4;cursor:default}
 .wrap{overflow-x:auto}.wrap{overflow-x:auto}.ac{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.r{display:flex;gap:6px;align-items:center}.r a{display:flex;text-decoration:none}.r a button{text-decoration:none}.ac button.ns{background:#ea580c;border-color:#c2410c;color:#fff}.ac button{height:30px;box-sizing:border-box;padding:0 10px;line-height:1;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.sb{display:flex;flex-direction:column;gap:6px;margin-top:8px;align-items:flex-start}.sb button{white-space:nowrap}
 table{border-collapse:collapse;width:100%;min-width:1100px}
 th,td{border-bottom:1px solid var(--bd);padding:6px;text-align:left;vertical-align:top}.cl label{white-space:nowrap;cursor:pointer}details{margin-top:8px}.note{opacity:.75;margin:8px 0 0;font-size:13px}details.card{margin-top:0}details.card ol{margin:8px 0 0;padding-left:22px}details.card li{margin:4px 0}summary{cursor:pointer}
@@ -39,13 +39,13 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <label>Token<br><input type="password" id="tk" size="18"></label></div>
 <p class="note">In the Google Sheet, click <b>[PS Tools] → Show Web app URL</b> to get the URL and to set the Token. Use the URL that starts with <b>https://script.google.com/macros/s/</b> and ends with <b>/exec</b> (the one from Deploy → Manage deployments). Every copy of the spreadsheet has its own URL. This box is hidden once the URL and token work, and it comes back if Start matching fails.</p></details>
 <details id="man"><summary>Manual route: upload a file instead (click to show)</summary>
-<div class="row" style="margin-top:8px"><label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label><button id="gof">Start matching (file)</button></div>
-<p class="note">The standard names still come from the spreadsheet above. When you use this route, <b>Download new mapping</b> appears next to the other buttons.</p></details>
+<div class="row" style="margin-top:8px"><label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label><button id="gof" class="pk">Start matching (file)</button></div>
+<p class="note">The standard names still come from the spreadsheet above. When you use this route, <b>Download new mapping</b> appears next to the other buttons. It gives one file with two sheets, <b>AllHashTable</b> and <b>Not a School</b>. Add it with <b>[PS Tools] → (Manual upload) Append new mapping to AllHashTable</b> in the Google Sheet.</p></details>
 <div id="msg"></div></div>
 <div id="app" hidden>
 <div class="card"><div class="row">
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
-<button id="sv" class="p">Save to AllHashTable</button><button id="dl2">Download updated AllHashTable</button><button id="dl1" hidden>Download new mapping</button></div>
+<button id="sv" class="p">Save to AllHashTable</button><button id="dl2" class="pk">Download updated AllHashTable</button><button id="dl1" hidden>Download new mapping</button></div>
 <div id="stats" style="margin-top:10px"></div><div id="sm" style="margin-top:6px"></div></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
@@ -143,11 +143,11 @@ async function start(mode){
     msg.textContent="Loading from the Google Sheet…";
     const d=await callApp("load");
     HASH=[["Input","Unified"],...d.hash];SCH=[["學校名稱","簡稱","地區","類型"],...d.schools];IGN=d.ignore||[];
-    buildMaps();let items;
+    buildMaps();let items,skippedIg=0;
     if(mode==="manual"){
       const wl=XLSX.read(await $("fl").files[0].arrayBuffer());
       RAWS=aoa(wl.Sheets[wl.SheetNames[0]]).slice(1).map(r=>String(r[0]??"").trim());
-      const cnt=new Map();RAWS.forEach(r=>{if(r)cnt.set(ek(r),{input:r,n:(cnt.get(ek(r))?.n||0)+1})});items=[...cnt.values()]}
+      const cnt=new Map();RAWS.forEach(r=>{if(r)cnt.set(ek(r),{input:r,n:(cnt.get(ek(r))?.n||0)+1})});const ig=new Set(IGN.map(ek)),all=[...cnt.values()];items=all.filter(x=>!ig.has(ek(x.input)));skippedIg=all.length-items.length}
     else{RAWS=d.unmatched.map(x=>x[0]);items=d.unmatched.map(([input,n])=>({input,n}))}
     if(!items.length){msg.textContent="Nothing to match: every school in AdmInfoDay(Responses) is already in AllHashTable.";$("app").hidden=true;$("call").hidden=true;return}
     ROWS=[];NEW=[];
@@ -155,7 +155,7 @@ async function start(mode){
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
-    msg.textContent="";$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
+    msg.textContent=skippedIg?`${skippedIg} name(s) already in Not a School were left out.`:"";$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
   }catch(e){msg.className="err";msg.textContent="Error: "+e.message}}
 $("go").onclick=()=>start("auto");
 $("gof").onclick=()=>start("manual");
@@ -224,12 +224,10 @@ $("call").onclick=()=>{const t=ROWS.filter(r=>r.st==="review"&&((r.draft??r.u)||
   t.forEach(confirmRow);render()};
 $("top").onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
 function save(wb,name){XLSX.writeFile(wb,name)}
-$("dl1").onclick=()=>{const by=new Map(ROWS.map(r=>[ek(r.input),r]));
-  const out=[["Input","Standard name","Status","International","Mainland","Overseas"]];
-  RAWS.forEach(x=>{const r=by.get(ek(x));if(!r){out.push([x,"","Blank","","",""]);return}
-    const ok=r.st!=="review";out.push([x,ok?r.u:"",({auto:"Auto",confirmed:"Confirmed",skipped:"Skipped",blank:"Blank"})[r.st]||"Unconfirmed",r.f.i?"Y":"",r.f.m?"Y":"",r.f.o?"Y":""])});
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...newRows()]),"New mappings");
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(out),"Result");save(wb,"PS_Result.xlsx")};
+$("dl1").onclick=()=>{const wb=XLSX.utils.book_new();   // one file, two sheets: the new mappings and the new Not a School names
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input","Standard name"],...newRows()]),"AllHashTable");
+  const seen=new Set(IGN.map(ek)),ign=[];ROWS.filter(r=>r.st==="ignored").forEach(r=>{if(!seen.has(ek(r.input))){seen.add(ek(r.input));ign.push([r.input])}});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Input"],...ign]),"Not a School");save(wb,"PS_Result.xlsx")};
 $("dl2").onclick=()=>{const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([...HASH,...newRows()]),"AllHashTable");
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(SCH),"香港小學名單");
