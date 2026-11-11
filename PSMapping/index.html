@@ -40,12 +40,12 @@ td input[type=text]{width:100%;box-sizing:border-box}
 <p class="note">In the Google Sheet, click <b>[PS Tools] → Show Web app URL</b> to get the URL and to set the Token. Use the URL that starts with <b>https://script.google.com/macros/s/</b> and ends with <b>/exec</b> (the one from Deploy → Manage deployments). Every copy of the spreadsheet has its own URL. This box is hidden once the URL and token work, and it comes back if Start matching fails.</p></details>
 <details id="man"><summary>Manual route: upload a file instead (click to show)</summary>
 <div class="row" style="margin-top:8px"><label>Student list (first column = school name, row 1 = header)<br><input type="file" id="fl" accept=".xlsx,.xls,.csv"></label><button id="gof" class="pk">Start matching (file)</button></div>
-<p class="note">The standard names still come from the spreadsheet above. When you use this route, <b>Download new mapping</b> appears next to the other buttons. It gives one file with two sheets, <b>AllHashTable</b> and <b>Not a School</b>. Add it with <b>[PS Tools] → (Manual upload) Append new mapping to AllHashTable</b> in the Google Sheet.</p></details>
+<p class="note">The standard names still come from the spreadsheet above. After matching, click <b>Save to AllHashTable</b> to write the result into the Google Sheet. Or click <b>Download new mapping</b> (one file with two sheets, <b>AllHashTable</b> and <b>Not a School</b>) and add it with <b>[PS Tools] → (Manual upload) Append new mapping to AllHashTable</b> in the Google Sheet.</p></details>
 <div id="msg"></div></div>
 <div id="app" hidden>
 <div class="card"><div class="row">
 <label>Show <select id="flt"><option value="todo">Needs review</option><option value="all">All</option><option value="done">Confirmed / auto</option></select></label>
-<button id="sv" class="p">Save to AllHashTable</button><button id="dl2" class="pk">Download updated AllHashTable</button><button id="dl1" hidden>Download new mapping</button></div>
+<button id="sv" class="p">Save to AllHashTable</button><button id="dl1" class="pk">Download new mapping</button><button id="dl2">Download updated AllHashTable</button></div>
 <div id="stats" style="margin-top:10px"></div><div id="sm" style="margin-top:6px"></div></div>
 <div class="wrap card"><table><thead><tr><th>#</th><th>Input (count)</th><th>Status</th><th style="width:34%">Standard name (suggestions / type to search)</th><th>Action</th><th>Is International school?</th><th>Is Mainland school?</th><th>Is Overseas school?</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
@@ -155,7 +155,7 @@ async function start(mode){
       const m=match(items[i].input),r={...items[i],...m};r.f=guess(r);r.touched=false;ROWS.push(r);
       if(i%25===0){msg.textContent=`Matching ${i+1} / ${items.length}…`;await new Promise(z=>setTimeout(z))}}
     const rk=r=>r.st==="auto"?2:r.u?0:1;ROWS.sort((x,y)=>rk(x)-rk(y)||(rk(x)===0?(y.sg[0]?.s||0)-(x.sg[0]?.s||0):0));
-    msg.textContent=skippedIg?`${skippedIg} name(s) already in Not a School were left out.`:"";$("dl1").hidden=mode!=="manual";$("app").hidden=false;$("call").hidden=false;render();
+    msg.textContent=skippedIg?`${skippedIg} name(s) already in Not a School were left out.`:"";$("app").hidden=false;$("call").hidden=false;render();
   }catch(e){msg.className="err";msg.textContent="Error: "+e.message}}
 $("go").onclick=()=>start("auto");
 $("gof").onclick=()=>start("manual");
