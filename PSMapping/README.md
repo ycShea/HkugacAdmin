@@ -1,6 +1,6 @@
 # PS Mapping
 
-🔗 **[PS Mapping (Most Updated)](https://docs.google.com/spreadsheets/d/1uz5Um7unTOxC40xlvNtxHZWX2y34kfBo-MQDKGq28TA/edit?gid=976826844#gid=976826844)**
+🔗 **[PS Mapping (Most Updated)](https://docs.google.com/spreadsheets/d/1uz5Um7unTOxC40xlvNtxHZWX2y34kfBo-MQDKGq28TA/)**
 
 🔗 **[Click here to access the Live Tool](https://ycshea.github.io/HkugacAdmin/PSMapping/)**
 
