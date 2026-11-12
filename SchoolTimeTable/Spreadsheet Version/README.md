@@ -1,3 +1,5 @@
+## 📌 **[The most updated Apps in Spreadsheet](https://docs.google.com/spreadsheets/d/1uJLG4HvhBxKqWsidXGVqhX28Bo0RGYk_4ZO8P3040pA/edit?gid=1214948461#gid=1214948461)**
+
 # Timetable PDF → Google Sheets
 
 A Google Apps Script bound to one spreadsheet (for example **2026-27 Timetable**). It reads the **Class PDF** and the **Teacher PDF** in a pop-up window and puts everything in Google:
@@ -24,7 +26,7 @@ The PDFs are read in your browser and are **not uploaded to Google**. Only the f
    | `Core` | `Core.html` |
    | `Convert` | `Convert.html` |
 
-5. Click **Save**, then reload the spreadsheet. A **Timetable** menu appears.
+5. Click **Save**, then reload the spreadsheet. A **Timetable** menu appears, with three items: **Import the two PDFs…**, **Free lesson attendance…** and **README (how to use)**. The last one opens this guide on GitHub.
 6. The first time you use it, Google asks you to authorise the script. It needs to edit this spreadsheet, create spreadsheets, and **see and move files in your Google Drive** (to save the two timetable spreadsheets in a folder). Click **Review permissions**, choose your account, then **Advanced ▸ Go to … (unsafe)** and **Allow**. The warning appears because the script is your own and has not been published.
 
 ## Use
